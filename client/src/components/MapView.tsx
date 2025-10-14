@@ -1,304 +1,639 @@
-import { useToast } from "@/hooks/use-toast"; // Import the useToast hook
-import toast from 'react-hot-toast';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import useLocationTracker from "@/hooks/useLocationTracker";
-import './map.css';
-import { uploadJsonToIPFS } from './UploadToIPFS';
-import { calculatePolygonArea } from "@shared/utils/geometry";
-import { useNavigate } from "react-router-dom"; // Add this import
-import { createClient } from "@supabase/supabase-js";
-import { userNFTAPI } from "../App"; // Import userNFT API functions
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ;
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY ;
+import { useNavigate } from "react-router-dom";
+import axios from "axios"; 
+import {BrowserStorageService} from '@shared/login'
+ 
+import {getUserPathByUsername} from "@shared/Get_Path"
+import {savePolygon} from "@shared/Save_Polygon"
 
-
-if(!supabaseUrl || !supabaseKey){
-    throw new Error("Missing Supabase environment variables");
-}   
-
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Define the type for a path point (lat and lon)
 interface PathPoint {
   lat: number;
-  lon: number;
+  lon: number; 
 }
 
+
+interface UserDataSchema {
+  username: string;
+  useremail: string;
+  userpath: PathPoint[]; // Add this property
+}
+
+interface SimpleUserPolygon {
+  id: number;
+  username: string;
+  polygon: number[][][]; 
+  // [ 
+  //    [ [lon, lat], [lon, lat], ... ],
+  //    [ [lon, lat], [lon, lat], ... ]
+  // ]
+}
 
 function MapView() {
-  const navigate = useNavigate(); // Add this line
+  const navigate = useNavigate();
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
-  const polylineRef = useRef<L.Polyline | null>(null);
-  const [userPath, setUserPath] = useState<PathPoint[]>([]);
+  const pathPolylineRef = useRef<L.Polyline | null>(null);
+  const [userData, setUserData] = useState<UserDataSchema | null>(null);
 
-  // --- CHANGE #1: Use useState for totalDistance ---
-  const [totalDistance, setTotalDistance] = useState(0);
-
-  const [position, setPosition] = useState<{ lat: number; lon: number; acc: number }>({ lat: 0, lon: 0, acc: 0 });
-  const [isClosed, setIsClosed] = useState(false);
-  const ghostPolyline = useRef<L.Polyline | null>(null);
-  const MAX_ACCURACY_THRESHOLD_M = 30;
-
-  // Initialize the toast hook (assuming it's set up correctly)
-  // const { toast } = useToast(); 
-
-  // 1. Get LIVE LOCATION
-  useLocationTracker((newPosition) => {
-      setPosition(newPosition);
-  });
-
-  // 2. Initialize the map
-  useEffect(() => {
-      if (!mapRef.current) {
-          mapRef.current = L.map('map').setView([position.lat, position.lon], 18);
-
-          const googleMap = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-              maxZoom: 20,
-              subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-          });
-
-          googleMap.addTo(mapRef.current);
-          createUserPathLine();
-      }
-  }, []);
-
-  function createUserPathLine() {
-      if (userPath.length > 0 && mapRef.current) {
-          polylineRef.current = L.polyline(userPath.map(p => L.latLng(p.lat, p.lon)), { color: 'blue' }).addTo(mapRef.current);
-          polylineRef.current.setStyle({
-              color: 'blue',
-              weight: 2,
-              opacity: 2,
-              dashArray: '5, 5',
-          });
-      }
-  }
-
-  function removeUserPathLine() {
-      if (polylineRef.current) {
-          polylineRef.current.remove();
-          polylineRef.current = null;
-      }
-  }
-
-  // 3. Update position and path using the custom hook
-  useLocationTracker((newPosition) => {
-    //   if (newPosition.acc > MAX_ACCURACY_THRESHOLD_M) {
-    //       toast.error(`GPS Accuracy is low (${newPosition.acc.toFixed(1)}m)`);
-    //       return;
-    //   }
-      
-      // Don't calculate distance for the very first point
-      if (position.lat === 0 && position.lon === 0) {
-          setPosition(newPosition);
-          return;
-      }
-      
-      const latlngA = L.latLng(position.lat, position.lon);
-      const latlngB = L.latLng(newPosition.lat, newPosition.lon);
-      const temp_distance = latlngA.distanceTo(latlngB);
-      
-    //   if (temp_distance > 100) {
-    //       toast.error(`Skipped large movement of ${temp_distance.toFixed(1)}m`);
-    //       // You might want to just update the position without adding to path/distance
-    //       // setPosition(newPosition); 
-    //       return;
-    //   }
-      
-    //   if (temp_distance < 5) {
-    //       // It's better not to notify the user every time they stop, it can be annoying.
-    //       // You can add a notification here if you want.
-    //       return;
-    //   }
-
-      // --- CHANGE #2: Update state correctly ---
-      setTotalDistance(prevDistance => prevDistance + temp_distance);
-
-      // Update position and path
-      setPosition(newPosition);
-      setUserPath((prevPath) => [
-          ...prevPath,
-          { lat: newPosition.lat, lon: newPosition.lon },
-      ]);
-  });
-
-  // 4. Update the map view, marker, and polyline when position or path changes
-  useEffect(() => {
-      if (mapRef.current) {
-          if (markerRef.current) {
-              mapRef.current.removeLayer(markerRef.current);
-          }
-          markerRef.current = L.marker([position.lat, position.lon]).addTo(mapRef.current!)
-              .bindPopup(`Lat: ${position.lat}, Lon: ${position.lon}, Acc: ${position.acc}`)
-              .openPopup();
-      }
-      removeUserPathLine();
-      createUserPathLine();
-      mapRef.current?.setView([position.lat, position.lon], 18);
-  }, [position, userPath]);
-
-    // Function to finalize the polygon
-    // IPFS
-    // Mint NFT
-    // Send to Dashboard Superbase
  
-  async function finalizePolygon(): Promise<string | void> {
-   //   if (isClosed || userPath.length < 5) return;
-      const finalCoords = [...userPath, userPath[0]];
-      const leafletCoords = finalCoords.map((point) => L.latLng(point.lat, point.lon));
+  
+ 
 
+  const [userPath, setUserPath] = useState<PathPoint[]>([]);// Save it in USERDATA PATH
+  const [position, setPosition] = useState<{ lat: number; lon: number; acc: number }>({ 
+    lat: 0, 
+    lon: 0, 
+    acc: 0 
+  });
+  const [isTracking, setIsTracking] = useState(true);
+  const [isLoopClosed, setIsLoopClosed] = useState(false);
+  
+  // Fixed: Use state for timer instead of var
+  const [timerInterval, setTimerInterval] = useState(3000);
 
-      
-      const newPolygon = L.polygon(leafletCoords, {
-          color: '#007bff',
-          fillColor: '#007bff',
-          fillOpacity: 0.2,
-      }).addTo(mapRef.current!);
-      setUserPath([]);
-      setIsClosed(true);
-      mapRef.current!.fitBounds(newPolygon.getBounds());
+ 
+ 
 
-      // Build GeoJSON coordinates [lng, lat]
-      const geoJsonCoords = finalCoords.map(p => [p.lon, p.lat]);
-      const polygonGeoJSON = {
-        type: "Feature" as const,
-        properties: {},
-        geometry: {
-          type: "Polygon" as const,
-          coordinates: [geoJsonCoords],
+  // 1️⃣ GPS tracking + marker update + path update
+  useEffect(() => {
+    if (!isTracking) return;
+
+    const interval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          const { latitude: lat, longitude: lon, accuracy: acc } = coords;
+
+          // Ignore inaccurate readings
+          if (acc > 250) return;
+
+          // Update position
+          setPosition({ lat, lon, acc });
+
+          // Update marker & map
+          if (markerRef.current && mapRef.current) {
+            markerRef.current.setLatLng([lat, lon]);
+            mapRef.current.panTo([lat, lon]);
+          }
+
+          // Append new path point
+          setUserPath(prev => [
+            ...prev,
+            { lat, lon }
+          ]);
+
+          console.log("Updated position:", { lat, lon, acc });
+          
+   
+
         },
-      };
-
-      // Calculate area in m^2 using shared geometry util
-      const areaMeters = calculatePolygonArea(
-        finalCoords.map(p => ({ lat: p.lat, lng: p.lon }))
+        err => console.error("Error getting location:", err),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
+    }, timerInterval);  
 
-      // Resolve username from localStorage if present
-      let userName = "Anonymous";
-      try {
-        const savedUser = localStorage.getItem('territoryWalkerUser');
-        if (savedUser) {
-          const parsed = JSON.parse(savedUser);
-          if (parsed?.username) userName = parsed.username;
-        }
-      } catch {}
-      
-      console.log("Using username for MapView:", userName);
+    return () => clearInterval(interval);
+  }, [isTracking, timerInterval]);
 
-      const metadata = {
-        UserName: userName,
-        PolygonCoordinates: finalCoords,
-        Area: areaMeters,
-        GeoJSON: polygonGeoJSON,
-      };
-
-
-
-
-    //   saveMetadataToDB(userName,metadata);  // Will be saved to Dashboard Supabase
+// 2️⃣ Initialize map
+useEffect(() => {
+  const mapContainer = document.getElementById('map');
+  if (!mapContainer || mapRef.current) return;
+  
+  if (position.lat !== 0 && position.lon !== 0) {
+    mapRef.current = L.map('map').setView([position.lat, position.lon], 18);
     
-      let hashcode='0000';
-      var url='';
-      try {
-         hashcode = await uploadJsonToIPFS(metadata);
-        url =`https://fuchsia-secondary-grasshopper-71.mypinata.cloud/ipfs/${hashcode}`
-        console.log('Metadata pinned at:', url);
-        // window.alert(url);
-        return url;
-      } catch (e) {
-        console.error('Failed to upload metadata to IPFS', e);
-      }
+    const googleSatellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '© Google'
+    });
+    
+    const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '© Google'
+    });
 
-      // For Dashboard - Save using userNFTAPI  
-      //userName-> DB
-      //hashcode-> DB
-      try {
-        await userNFTAPI.createUserNFT(userName, hashcode);
-        console.log("Data Saved for Dashboard for user:", userName, "Hash:", hashcode);
-        toast.success(`NFT data saved successfully for ${userName}!`);
-      } catch (error) {
-        console.error("Error saving NFT data:", error);
-        toast.error("Failed to save NFT data to database");
+    googleSatellite.addTo(mapRef.current);
+
+    L.control.layers({
+      "Satellite": googleSatellite,
+      "Streets": googleStreets
+    }).addTo(mapRef.current);
+
+    markerRef.current = L.marker([position.lat, position.lon])
+      .addTo(mapRef.current)
+      .bindPopup('You are here!')
+      .openPopup();
+
+    // Update timer after map initialization
+    setTimerInterval(5000);
+
+    // Initialize polyline immediately
+    pathPolylineRef.current = L.polyline([], { color: 'blue', weight: 4 }).addTo(mapRef.current);
+
+    // Get User Data
+    BrowserStorageService.getUserFromStorage().then(async(userinfo) => {
+      if (!userinfo?.userData?.username) {
+        console.error("No user data found");
+        return;
       }
+      
+      setUserData({
+        username: userinfo.userData.username,
+        useremail: userinfo.userData.useremail,
+        userpath: []
+      });
+      
+      console.log("UserInfo : ", userinfo.userData.username);    
+      console.log("Db User Path ............");
+      const path = await getUserPathDirectly(userinfo.userData.username);
+      console.log("Loaded path:", path);
+      setUserPath(path || []); // Ensure it's always an array        
+    }).catch(error => {
+      console.error("Error loading user data:", error);
+    });
+  }
+}, [position.lat, position.lon]);  
+ 
+
+
+// UserPath
+  const saveUserPathAsync = async () => {
+  try {
+    if (!userData || !userData.username) {
+      console.error("User data or username is missing.");
+      return;
+    }
+    
+    const response = await axios.post("/api/paths", {
+      username: userData?.username,
+      paths: userPath
+    });
+    console.log(response);
+          
+    if (response.data.success) {
+      console.log("Paths saved successfully:", response.data);
+    } else {
+      console.log("Failed to save paths:", response.data.message);
+    }
+  } catch (error) {
+    console.log("Can't able to save paths:", error);
+  }
+}
+
+ 
+//  const getUserPathDirectly = async (username: string) => {
+//   try {
+//     const result = await getUserPathByUsername(username);
+    
+//     if (result.success === false) {
+//       console.error("Error:", result.data);
+//       return []; // Return empty array instead of null
+//     }
+    
+//     console.log("User path:", result.data);
+    
+//     // Ensure we always return an array
+//     if (Array.isArray(result.data)) {
+//       return result.data;
+//     } else if (result.data) {
+//       // If it's a single object, wrap it in array
+//       return [result.data];
+//     } else {
+//       return [];
+//     }
+//   } catch (error) {
+//     console.error("Error:", error);
+//     return []; // Return empty array instead of null
+//   }
+// }; 
+
+
+
+
+// 3. Create LINE
+
+
+
+const getUserPathDirectly = async (username: string) => {
+  try {
+    if (!username) {
+      console.error("No username provided");
+      return [];
+    }
+    
+    const result = await getUserPathByUsername(username);
+    
+    if (result.success === false) {
+      console.error("Error fetching user path:", result.data);
+      return []; // Return empty array for non-existent users
+    }
+    
+    console.log("User path data:", result.data);
+    
+    // Ensure we always return an array of PathPoint objects
+    if (Array.isArray(result.data)) {
+      // Filter out any invalid points and ensure they have lat/lon properties
+      const validPath = result.data.filter(point => 
+        point && typeof point.lat === 'number' && typeof point.lon === 'number'
+      );
+      console.log(`Loaded ${validPath.length} valid path points`);
+      return validPath;
+    } else if (result.data && typeof result.data.lat === 'number' && typeof result.data.lon === 'number') {
+      // Single point object
+      return [result.data];
+    } else {
+      console.log("No valid path data found for user:", username);
+      return [];
+    }
+  } catch (error) {
+    console.error("Error in getUserPathDirectly:", error);
+    return []; // Always return array, never null
+  }
+};
+
+
+useEffect(() => {
+  if (!mapRef.current) return;
+  
+  // Safety check - ensure userPath is an array
+  if (!Array.isArray(userPath)) {
+    console.warn("userPath is not an array:", userPath);
+    return;
   }
 
-  // --- CHANGE #3: Create a formatted distance string for display ---
-  const formatDistance = (meters: number) => {
-      if (meters < 1000) {
-          return `${meters.toFixed(1)} m`;
+  const latlngs: L.LatLngExpression[] = userPath.map(p => [p.lat, p.lon]);
+
+  // Ensure pathPolylineRef.current exists before using it
+  if (!pathPolylineRef.current && mapRef.current) {
+    // Initialize the polyline if it doesn't exist
+    pathPolylineRef.current = L.polyline([], { color: 'blue', weight: 4 }).addTo(mapRef.current);
+  }
+
+  // Now safely set the latlngs
+  if (pathPolylineRef.current) {
+    pathPolylineRef.current.setLatLngs(latlngs);
+  }
+
+  // Move Map Smoothly to the current to latest position
+  if (latlngs.length && mapRef.current) {
+    const last = latlngs[latlngs.length - 1];
+    mapRef.current.panTo(last);
+  }
+}, [userPath]);
+ 
+ 
+
+//Fetech Path
+useEffect(() => {
+//  getUserPathAsync();
+}, []);
+
+
+ const delteUserPathAsync = async () => {
+  try {
+    if (!userData || !userData.username) {
+      console.error("User data or username is missing.");
+      return;
+    }
+    
+    const response = await axios.delete("/api/paths", {
+      data: { username: userData?.username },
+    });
+    console.log(userData);
+          
+    if (response.data.success) {
+      console.log("Paths deleted successfully:", response.data);
+    } else {
+      console.log("Failed to save paths:", response.data.message);
+    }
+  } catch (error) {
+    console.log("Can't able to save paths:", error);
+  }
+}
+
+
+  // Loop detection
+  const detectLoops = async () => {
+    try {
+      const response = await axios.post("/api/detect-loops", {
+        'userpath': userPath,
+      });
+      
+      if (response.data.closed_loops === true) {
+        console.log("Triggered !!!!!!!!!!!!!!!!!!!!!!!!!!!");
+        setIsLoopClosed(true);
+        createPolygonFromPath();
       } else {
-          return `${(meters / 1000).toFixed(2)} km`;
+        console.log("No closed loop detected"); 
+        setIsLoopClosed(false);
       }
+      console.log(response.data);
+    } catch (error) {
+      console.error("Error detecting loops:", error);
+    }
   };
+
+  // Reset path function (uncommented as it's referenced in JSX)
+const resetPath = () => {
+  setUserPath([]);
+  setIsLoopClosed(false);
+  if (pathPolylineRef.current) {
+    pathPolylineRef.current.setLatLngs([]);
+  }
+  delteUserPathAsync();
+};
+
+  const createPolygonFromPath = useCallback(() => { 
+    if (userPath.length === 0) return null;
+
+    const loopClosurePoint = userPath[userPath.length - 1];
+
+    // Find the index where the loop closes
+    const closureIndex = userPath.findIndex((point, index) => 
+      index < userPath.length - 1 && // Don't match the last point itself
+      Math.abs(point.lat - loopClosurePoint.lat) < 0.0001 && 
+      Math.abs(point.lon - loopClosurePoint.lon) < 0.0001
+    );
+
+    if (closureIndex === -1) return null;
+
+    // Create polygon from start to closure point
+    const polygonPoints = userPath.slice(0, closureIndex + 1);
+    
+    // Ensure polygon is closed by adding the first point at the end
+    const closedPolygonPoints = [...polygonPoints, polygonPoints[0]];
+
+    // Create the polygon
+    let polygon: L.Polygon | undefined;
+    if (mapRef.current) {
+      polygon = L.polygon(closedPolygonPoints.map(p => [p.lat, p.lon]), {
+        color: '#007bff',
+        fillColor: '#007bff',
+        fillOpacity: 0.3,
+        weight: 4
+      }).addTo(mapRef.current);
+
+      // Add popup with polygon info
+      const area = calculatePolygonArea(closedPolygonPoints);
+      polygon.bindPopup(`
+        <div>
+          <h3>Polygon Created!</h3>
+          <p>Points: ${closedPolygonPoints.length}</p>
+          <p>Area: ${area.toFixed(2)} m²</p>
+          <p>Loop closed at point ${closureIndex}</p>
+        </div>
+      `).openPopup();
+
+      // Fit map to polygon bounds
+      mapRef.current.fitBounds(polygon.getBounds());
+
+      console.log('✅ Polygon created with', closedPolygonPoints.length, 'points');
+      //  SAVE POLYGON TO THE DATABASE .
+      console.log(closedPolygonPoints);
+      
+
+    }
+    
+    return polygon;
+  }, [userPath]);
+
+
+  // 6. Calculate polygon area (moved outside detectLoops)
+  const calculatePolygonArea = (points: PathPoint[]): number => {
+    if (points.length < 3) return 0;
+    
+    let area = 0;
+    const n = points.length;
+    
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += points[i].lon * points[j].lat;
+      area -= points[j].lon * points[i].lat;
+    }
+    
+    return Math.abs(area / 2) * 111319.9;
+  };
+
+
+//save polygon
+  const savePolygonFromPath=()=>{
+     if (!userData?.username || userPath.length < 3) {
+    console.error('Cannot save polygon: Invalid data');
+    return;
+  }
+
+  const result =   savePolygon(userData.username, userPath );
   
+  if (result.success) {
+    console.log('✅ Polygon saved to database!');
+    
+    // Show success message to user
+    if (result.data && result.data[0]) {
+      const savedPolygon = result.data[0];
+      console.log('Saved polygon data:', savedPolygon);
+    }
+  } else {
+    console.error('❌ Failed to save polygon:', result.error);
+  }
+  };
+
+
+
   return (
-      <div id="map" style={{ position: 'relative', height: '100vh', width: '100%' }}>
-          {/* Back to Home Button */}
-          <div style={{
-              position: 'absolute',
-              top: '100px',
-              left: '10px',
-              zIndex: 1000,
-              borderRadius: '100px'
-          }}>
-              <button
-                  onClick={() => navigate("/")}
-                  style={{
-                      backgroundColor: '#2563eb',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '100%',
-                      padding: '20px 20px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                      fontWeight: 'bold'
-                  }}
-              >
-                  ←
-              </button>
-          </div>
-          {/* Finalize Polygon Button */}
-          <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000 }}>
-              <button
-                  onClick={finalizePolygon}
-                  
-                //   style={{
-                //       backgroundColor: isClosed || userPath.length >= 5 ? 'green' : 'grey',
-                //       color: 'white',
-                //       border: 'none',
-                //       borderRadius: '5px',
-                //       padding: '10px 20px',
-                //     //   cursor: isClosed || userPath.length >= 5 ? 'pointer' : 'not-allowed',
-                //       boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                //   }}
-                //   disabled={isClosed || userPath.length < 5}
-              >
-                  Finalize Polygon
-              </button>
-          </div>
-          {/* --- CHANGE #4: The new and improved distance display --- */}
-          <div style={{
-              position: 'absolute',
-              bottom: '20px',
-              left: '20px',
-              zIndex: 1000,
-              backgroundColor: 'rgba(255, 255, 255, 0.8)',
-              padding: '8px 15px',
-              borderRadius: '8px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#333'
-          }}>
-              <span>Distance: {formatDistance(totalDistance)}</span>
-          </div>
+    <div id="map" style={{ position: 'relative', height: '100vh', width: '100%' }}>
+      {/* Back to Home Button */}
+      <div style={{ position: 'absolute', top: '20px', left: '10px', zIndex: 1000 }}>
+        <button onClick={() => navigate("/")} style={buttonStyle}>
+          ← Home
+        </button>
       </div>
+
+      {/* Control Panel */}
+      <div style={controlPanelStyle}>
+        <h4 style={{ margin: '0 0 10px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: isTracking ? '#10b981' : '#ef4444',
+            animation: isTracking ? 'pulse 1s infinite' : 'none'
+          }}></div>
+          Live Tracking {isTracking ? 'ON' : 'OFF'}
+        </h4>
+        
+        <div style={infoStyle}>
+          <div><strong>Lat:</strong> {position.lat.toFixed(6)}</div>
+          <div><strong>Lon:</strong> {position.lon.toFixed(6)}</div>
+          <div><strong>Accuracy:</strong> {position.acc.toFixed(1)}m</div> 
+        </div>
+        
+        {/* Loop Detection Status */}
+        <div style={{
+          margin: '10px 0',
+          padding: '8px',
+          backgroundColor: isLoopClosed ? '#dcfce7' : '#f3f4f6',
+          border: `2px solid ${isLoopClosed ? '#10b981' : '#d1d5db'}`,
+          borderRadius: '4px'
+        }}>
+          <strong style={{ color: isLoopClosed ? '#065f46' : '#374151' }}>
+            {isLoopClosed ? '✅ LOOP CLOSED!' : '🔄 Detecting Loop...'}
+          </strong>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+          <button
+            onClick={() => {              
+              setIsTracking(!isTracking); 
+              // saveUserPathAsync();
+            }}
+            style={{
+              ...buttonStyle,
+              backgroundColor: isTracking ? '#ef4444' : '#10b981'
+            }}
+          >
+            {isTracking ? '⏸️ Pause' : '▶️ Resume'} Tracking
+          </button>
+          <button
+            onClick={() => {              
+              saveUserPathAsync();
+            }}
+            style={{
+              ...buttonStyle,
+              backgroundColor: isTracking ? '#ef4444' : '#10b981'
+            }}
+          >
+            Save UserPath
+          </button>
+          
+          
+          <button
+            onClick={()=>{
+              saveUserPathAsync();
+              detectLoops(); 
+              
+            }}
+            style={{
+              ...buttonStyle,
+              backgroundColor: '#4f46e5'
+            }}
+          >
+            🔍 Detect Loops
+          </button>
+
+          <button
+            onClick={resetPath}
+            style={{
+              ...buttonStyle,
+              backgroundColor: '#6b7280'
+            }}
+          >
+            🗑️ Reset Path
+          </button>
+
+          {isLoopClosed && (
+            <button
+              onClick={createPolygonFromPath}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#10b981',
+                animation: 'pulse 2s infinite'
+              }}
+            >
+              🎯 Create Polygon Now
+            </button>
+          )}
+
+          
+          {isLoopClosed && (
+            <button
+              onClick={savePolygonFromPath}
+              style={{
+                ...buttonStyle,
+                backgroundColor: '#10b981',
+                animation: 'pulse 2s infinite'
+              }}
+            >
+              Save Polygon To the Database
+            </button>
+          )}
+
+          
+        </div>
+      </div>
+
+      {/* Status Indicator */}
+      <div style={statusStyle}>
+        <div style={{
+          width: '10px',
+          height: '10px',
+          borderRadius: '50%',
+          backgroundColor: isLoopClosed ? '#10b981' : (isTracking ? '#10b981' : '#6b7280'),
+          animation: (isTracking || isLoopClosed) ? 'pulse 1s infinite' : 'none'
+        }}></div>
+        {isLoopClosed ? '✅ Loop Closed - Polygon Ready!' : 
+         isTracking ? '🔄 Tracking - Looking for loop closure...' : '⏸️ Tracking paused'}
+      </div>
+
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+        `}
+      </style>
+    </div>
   );
 }
+
+// Styles (unchanged)
+const buttonStyle = {
+  backgroundColor: '#2563eb',
+  color: 'white',
+  border: 'none',
+  borderRadius: '5px',
+  padding: '8px 12px',
+  cursor: 'pointer',
+  fontWeight: 'bold' as const,
+  width: '100%'
+};
+
+const controlPanelStyle = {
+  position: 'absolute' as const,
+  top: '20px',
+  right: '20px',
+  zIndex: 1000,
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  padding: '15px',
+  borderRadius: '8px',
+  boxShadow: '0 2px 10px rgba(0,0,0,0.2)',
+  minWidth: '250px'
+};
+
+const infoStyle = {
+  fontSize: '12px',
+  marginBottom: '10px',
+  lineHeight: '1.4'
+};
+
+const statusStyle = {
+  position: 'absolute' as const,
+  bottom: '20px',
+  left: '20px',
+  zIndex: 1000,
+  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  padding: '10px 15px',
+  borderRadius: '8px',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+  fontSize: '14px',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px'
+};
 
 export default MapView;

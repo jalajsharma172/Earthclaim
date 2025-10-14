@@ -4,6 +4,7 @@ import { serveStatic, log } from "./vite";
 import { initializeDatabase } from "./dbInit";
 import { type Server } from "http";
 import { registerRoutes } from "./routes";
+import { detectClosedLoopsHandler } from "./loop_detection.ts";
 
 export async function createExpressApp(): Promise<{ app: express.Express; server: Server }> {
   const app = express();
@@ -50,8 +51,39 @@ export async function createExpressApp(): Promise<{ app: express.Express; server
     res.status(status).json({ message });
   });
 
+app.post('/api/detect-loops', (req, res) => {
+    // Let detectClosedLoopsHandler handle sending the response
+
+    try {
+      const detect= detectClosedLoopsHandler(req, res);
+      console.log(detect);
+       
+    } catch (err) {
+      console.log('Error in detection python file ',err);
+      
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return { app, server: httpServer };
-}
+} 
 
 export async function attachFrontend(app: express.Express, server: Server) {
   if (app.get("env") === "development") {
@@ -61,5 +93,4 @@ export async function attachFrontend(app: express.Express, server: Server) {
   }
   serveStatic(app);
 }
-
 

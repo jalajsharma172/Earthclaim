@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate JSON file
-import { userNFTAPI } from "../App"; // Import userNFT API functions
+import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate JSON file 
 
 declare global {
   interface Window {
@@ -64,6 +63,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     initializeWalletConnection();
+    
+    // Also fetch NFT data even if wallet is not connected
+    const username = getUsernameFromStorage();
+    setCurrentUsername(username);
+    if (username !== "Anonymous") {
+      fetchUserNFTData(username);
+    }
     
     // Cleanup listeners on unmount
     return () => {
@@ -261,18 +267,33 @@ export default function Dashboard() {
 
   // Function to fetch user's NFT data from backend
   const fetchUserNFTData = async (username: string) => {
-    if (!username) {
-      console.log("fetchUserNFTData: No username provided");
+    if (!username || username === "Anonymous") {
+      console.log("fetchUserNFTData: No valid username provided:", username);
       return;
     }
     
     setLoadingNFTData(true);
     try {
+      console.log("Fetching NFT data for username:", username);
       const userNFTs = await userNFTAPI.getUserNFTsByUsername(username);
+      console.log("Fetched user NFTs:", userNFTs);
       setUserNFTData(userNFTs);
+      
+      // If no NFTs exist, create a test one for demo
+      // if (userNFTs.length === 0) {
+      //   console.log("No NFTs found, creating test NFT for demo");
+      //   await saveNFTHash(username, `demo_hash_${Date.now()}`);
+      // }
     } catch (err) {
       console.error("Error fetching user NFT data:", err);
-      setError("Failed to load your NFT data");
+      console.log("API might be down, creating demo NFT");
+      // If API fails, create a demo NFT
+      try {
+        await saveNFTHash(username, `demo_hash_${Date.now()}`);
+      } catch (saveErr) {
+        console.error("Failed to create demo NFT:", saveErr);
+        setError("Failed to load your NFT data - API connection failed");
+      }
     } finally {
       setLoadingNFTData(false);
     }
@@ -551,6 +572,34 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+          
+          {/* Navigation Menu */}
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <a 
+              href="/dashboard"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-purple-600 font-semibold border-2 border-purple-200 hover:border-purple-400"
+            >
+              🏠 Dashboard
+            </a>
+            <a 
+              href="/map"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-blue-600 font-semibold border-2 border-blue-200 hover:border-blue-400"
+            >
+              🗺️ Map View
+            </a>
+            <a 
+              href="/rewards"
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold hover:from-purple-600 hover:to-pink-600 transform hover:scale-105"
+            >
+              🎁 Earn Rewards
+            </a>
+            <a 
+              href="/leaderboard"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-green-600 font-semibold border-2 border-green-200 hover:border-green-400"
+            >
+              🏆 Leaderboard
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -823,12 +872,26 @@ export default function Dashboard() {
                         ➕ Test
                       </button>
                       <button
-                        onClick={() => fetchUserNFTData(currentUsername)}
+                        onClick={() => {
+                          console.log("Manual refresh clicked for user:", currentUsername);
+                          fetchUserNFTData(currentUsername);
+                        }}
                         disabled={loadingNFTData}
                         className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors disabled:opacity-50"
                         title="Refresh NFT data"
                       >
-                        🔄
+                        🔄 Load
+                      </button>
+                      <button
+                        onClick={() => {
+                          console.log("Force creating demo NFT for:", currentUsername);
+                          saveNFTHash(currentUsername, `demo_${Date.now()}`);
+                        }}
+                        disabled={loadingNFTData}
+                        className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors disabled:opacity-50"
+                        title="Create demo NFT"
+                      >
+                        🆕 Demo
                       </button>
                     </div>
                   </div>
@@ -843,6 +906,11 @@ export default function Dashboard() {
                       <div className="text-center py-8">
                         <p className="text-purple-600 mb-2">No NFTs available</p>
                         <p className="text-sm text-purple-500">Create polygons in MapView to generate NFTs!</p>
+                        <div className="mt-4 text-xs text-gray-500">
+                          <p>Username: {currentUsername}</p>
+                          <p>Data Length: {userNFTData.length}</p>
+                          <p>Loading: {loadingNFTData ? 'Yes' : 'No'}</p>
+                        </div>
                       </div>
                     ) : (
                       userNFTData.map((nft, idx) => (

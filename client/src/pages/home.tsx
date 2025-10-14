@@ -1,27 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom"; // Add this import
-import MapView from "@/components/MapView";
-import type { User } from "@shared/schema";
-import useLocationTracker from "@/hooks/useLocationTracker";
-
-interface HomeProps {
-  user: User;
-  onLogout: () => void;
+import MapView from "@/components/MapViewdetection";
+// import type { User } from "@shared/schema";
+// import useLocationTracker from "@/hooks/useLocationTracker";
+import {BrowserStorageService} from '@shared/login'
+ interface UserData {
+  username: string
+  useremail: string 
 }
 
-export default function Home({ user, onLogout }: HomeProps) {
+
+export default function Home() {
   const [showMap, setShowMap] = useState(false);
   const navigate = useNavigate(); // Add this line
 
-  // Example wallet connect handler
-  const handleWalletConnect = () => {
-    alert("Wallet connect coming soon!");
-  };
 
-  // Example leaderboard navigation
-  const handleLeaderboard = () => {
-    window.location.href = "/leaderboard";
-  };
+ 
+ 
+
+
+
+
+
 
   return (
     <div className="h-screen w-screen bg-gradient-to-br from-blue-100 to-green-100 overflow-auto">
@@ -37,7 +37,7 @@ export default function Home({ user, onLogout }: HomeProps) {
           </button>
           <button
             className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-            onClick={handleLeaderboard}
+            onClick={() => navigate("/leaderboard")}
           >
             See Leaderboard
           </button>
@@ -49,13 +49,23 @@ export default function Home({ user, onLogout }: HomeProps) {
           </button>
           <button
             className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-            onClick={handleWalletConnect}
+            onClick={()=>{
+            if ('Notification' in window) {
+                new Notification('metamask is not ready');
+                alert('metamask is not ready');
+            } else {
+                console.log('This browser does not support notifications');
+            }
+            }}
           >
             Connect Wallet
           </button>
           <button
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-            onClick={onLogout}
+            onClick={()=>{
+              //delete local storage
+              BrowserStorageService.clearUserFromStorage();
+            }}
           >
             Logout
           </button>
@@ -68,6 +78,8 @@ export default function Home({ user, onLogout }: HomeProps) {
           Welcome to Territory Walker!
         </h1>
         <p className="text-lg text-gray-700 mb-6">
+          https://app.emergent.sh/
+          
           Territory Walker is a geospatial tracking app where you can log your
           walks, claim areas, and compete for achievements. Track your paths,
           visualize your territory, and see how you rank on the leaderboard!
@@ -85,7 +97,7 @@ export default function Home({ user, onLogout }: HomeProps) {
       </section>
 
       {/* MapView Section */}
-      {showMap && (
+      {/* {showMap && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
           <div className="relative w-[90vw] h-[80vh] bg-white rounded-lg shadow-2xl overflow-hidden">
             <button
@@ -97,7 +109,7 @@ export default function Home({ user, onLogout }: HomeProps) {
             <MapView />
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 }

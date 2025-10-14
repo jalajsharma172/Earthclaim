@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState ,useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,70 +6,77 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import type { User } from "@shared/schema";
+import { MapPin } from "lucide-react"; 
+import { BrowserStorageService, SuprabaseStorageService, type UserData } from "@shared/login";
+import { useNavigate } from "react-router-dom";
+
+ 
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
   username: z.string().min(1, "Username is required"),
-  isAnonymous: z.boolean().default(false),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-interface LoginProps {
-  onLogin: (user: User) => void;
-}
+ 
 
-export default function Login({ onLogin }: LoginProps) {
+export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+ const navigate = useNavigate(); 
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       username: "",
-      isAnonymous: false,
     },
   });
 
-  const handleLogin = async (data: LoginForm) => {
+ 
+  
+
+//  Check for existing user in local storage on component mount
+  useState(() => {
+    const checkStoredUser = async () => {
+      const storedUser = await  BrowserStorageService.getUserFromStorage();
+      if (storedUser) {
+        console.log( 'Check for existing user '+ storedUser);
+      } 
+    };
+    checkStoredUser();
+  });
+
+
+  const handleFormLogin = async () => {
     setIsLoading(true);
     try {
-      const response = await apiRequest('POST', '/api/auth/login', {
-        email: data.email || undefined,
-        username: data.username,
-        isAnonymous: data.isAnonymous,
-      });
+       const formData = form.getValues();
+      const username = formData.username;
+      const email: string = formData.email ?? "";
+
+      console.log(formData,'formdata');
+
+
       
-      const result = await response.json();
-      onLogin(result.user);
+      await SuprabaseStorageService(username,email);
+      await BrowserStorageService.saveUserToStorage({username:username,useremail:email});
+      console.log("handleFormLogin done");
       
-      toast({
-        title: "Welcome to Territory Walker!",
-        description: "Start exploring and claiming your territory",
-      });
+    // window.location.reload();
+      
     } catch (error) {
-      toast({
-        title: "Login Failed",
-        description: "Please try again",
-        variant: "destructive",
-      });
+      console.log('Login Superbase is not working.');
+      
+      // console.error("Login failed:", error);
+      // You can add user-friendly error messages here
+      // For example: setErrorState(error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAnonymousLogin = () => {
-    const username = `Explorer${Math.floor(Math.random() * 10000)}`;
-    form.setValue('username', username);
-    form.setValue('isAnonymous', true);
-    form.setValue('email', '');
-    handleLogin({ username, isAnonymous: true, email: '' });
-  };
+ 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-green-100 flex items-center justify-center p-4">
@@ -84,7 +91,7 @@ export default function Login({ onLogin }: LoginProps) {
         
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(handleFormLogin)} className="space-y-4">
               <FormField
                 control={form.control}
                 name="email"
@@ -107,14 +114,12 @@ export default function Login({ onLogin }: LoginProps) {
                 control={form.control}
                 name="username"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
+                  <FormItem> 
                       <Input
                         {...field}
                         placeholder="Choose your username"
                         className="px-4 py-3 rounded-xl focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                      />
-                    </FormControl>
+                      /> 
                     <FormMessage />
                   </FormItem>
                 )}
@@ -134,7 +139,7 @@ export default function Login({ onLogin }: LoginProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={handleAnonymousLogin}
+              onClick={() => handleFormLogin()}
               disabled={isLoading}
               className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-xl transition-colors"
             >
