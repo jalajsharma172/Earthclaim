@@ -238,29 +238,29 @@ useEffect(() => {
 
  
   //   // IPFS
-  //     let hashcode='0000';
-  //     var url='';
-  //     try {
-  //        hashcode = await uploadJsonToIPFS(metadata);
-  //       url =`https://fuchsia-secondary-grasshopper-71.mypinata.cloud/ipfs/${hashcode}`
-  //       console.log('Metadata pinned at:', url);
-  //       // window.alert(url);
-  //       return url;
-  //     } catch (e) {
-  //       console.error('Failed to upload metadata to IPFS', e);
-  //     }
+      // let hashcode='0000';
+      // var url='';
+      // try {
+      //    hashcode = await uploadJsonToIPFS(metadata);
+      //   url =`https://fuchsia-secondary-grasshopper-71.mypinata.cloud/ipfs/${hashcode}`
+      //   console.log('Metadata pinned at:', url);
+      //   // window.alert(url);
+      //   return url;
+      // } catch (e) {
+      //   console.error('Failed to upload metadata to IPFS', e);
+      // }
 
-  //     // For Dashboard - Save using userNFTAPI  
-  //     //userName-> DB
-  //     //hashcode-> DB
-  //     // try {
-  //     //   await userNFTAPI.createUserNFT(userName, hashcode);
-  //     //   console.log("Data Saved for Dashboard for user:", userName, "Hash:", hashcode);
-  //     //   toast.success(`NFT data saved successfully for ${userName}!`);
-  //     // } catch (error) {
-  //     //   console.error("Error saving NFT data:", error);
-  //     //   toast.error("Failed to save NFT data to database");
-  //     // }
+      // For Dashboard - Save using userNFTAPI  
+      //userName-> DB
+      //hashcode-> DB
+      // try {
+      //   await userNFTAPI.createUserNFT(userName, hashcode);
+      //   console.log("Data Saved for Dashboard for user:", userName, "Hash:", hashcode);
+      //   toast.success(`NFT data saved successfully for ${userName}!`);
+      // } catch (error) {
+      //   console.error("Error saving NFT data:", error);
+      //   toast.error("Failed to save NFT data to database");
+      // }
   // }
 
   // --- CHANGE #3: Create a formatted distance string for display ---

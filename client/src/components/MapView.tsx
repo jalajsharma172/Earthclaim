@@ -426,19 +426,19 @@ const resetPath = () => {
     return;
   }
 
-  const result =   savePolygon(userData.username, userPath );
+  // const result = savePolygon(userData.username, userPath );
   
-  if (result.success) {
-    console.log('✅ Polygon saved to database!');
+  // if (result.success) {
+  //   console.log('✅ Polygon saved to database!');
     
-    // Show success message to user
-    if (result.data && result.data[0]) {
-      const savedPolygon = result.data[0];
-      console.log('Saved polygon data:', savedPolygon);
-    }
-  } else {
-    console.error('❌ Failed to save polygon:', result.error);
-  }
+  //   // Show success message to user
+  //   if (result.data && result.data[0]) {
+  //     const savedPolygon = result.data[0];
+  //     console.log('Saved polygon data:', savedPolygon);
+  //   }
+  // } else {
+  //   console.error('❌ Failed to save polygon:', result.error);
+  // }
   };
 
 

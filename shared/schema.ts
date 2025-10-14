@@ -1,7 +1,6 @@
-import { sql } from "drizzle-orm";
+ 
 import { pgTable, text, varchar, real, timestamp, integer } from "drizzle-orm/pg-core";
- import { z } from "zod";
-
+ import { z } from "zod"; 
 
 
  
@@ -18,6 +17,22 @@ export const userpathSchema = z.object({
     lon: z.number()
   })).default([]),  
 });
+
+export const UserPolygon =   z.array(z.object({
+    UserName : z.string(),
+    IPFS: z.string(),
+    Area: z.string()
+  })).default([]);  
+
+ 
+
+ 
+ 
+
+ 
+
+ 
+ 
  
 
 

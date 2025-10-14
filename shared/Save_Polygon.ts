@@ -1,29 +1,21 @@
 import { supabase } from "@shared/supabaseClient";
  
-export const savePolygon = async (username: string, polygonPoints: any[]) => {
+export const savePolygon = async (username: string, IPFS:string,Area:string) => {
   try { 
-    const simplePolygon = polygonPoints.map(point => [point.lon, point.lat]);
-    simplePolygon.push(simplePolygon[0]); 
-     
-    const { data: existingData, error: fetchError } = await supabase
-      .from('UserPolygon')
-      .select('Polygon')
-      .eq('UserName', username)
-      .single();
 
-    let updatedPolygons = [simplePolygon]; // Start with new polygon
-    
-    if (existingData && existingData.Polygon) {
-      // User exists, append to existing polygons
-      updatedPolygons = [...existingData.Polygon, simplePolygon];
+
+    const PolygonIPFS={
+      IPFS:IPFS,
+      Area:Area
     }
+
 
     // Upsert (update or insert) the record
     const { data, error } = await supabase
       .from('UserPolygon')
       .upsert({
         UserName: username,
-        Polygon: updatedPolygons
+        Polygon: PolygonIPFS
       })
       .select();
 

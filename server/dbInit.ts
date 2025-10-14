@@ -46,8 +46,7 @@ export async function initializeDatabase() {
     
  
     
-  } catch (error) {
-    console.error('Failed to initialize database:', error);
+  } catch (error) { 
     throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

@@ -7,18 +7,13 @@ import {upsertUserPath} from '@shared/Save_Path'
 import {clearUserPath} from '@shared/Delete_Path'
 import {getUserPathByUsername} from '@shared/Get_Path'
 import {savePolygon} from "@shared/Save_Polygon"
+import {uploadJsonToIPFS} from "./uploafToIPFS"; 
+import { polygon } from "@turf/helpers";
+import area from "@turf/area";//Area calculator
+import { Position } from "geojson";
+import {UserPolygon} from '@shared/schema'
 
-// In-memory storage for paths (replace with database in production)
-let pathStorage: Array<{
-  id: string;
-  path: string;
-  createdAt: string;
-}> = [];
-
-// Helper function to generate unique ID
-function generateId(): string {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
+ 
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -131,59 +126,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+// POST API to save polygons to UserPolygon table
 
+  // Additional API to get all paths (optional)
   app.post("/api/save-polygons", async (req, res) => {
-  try {
-    const { username, polygons } = req.body;
+    try {
+      const {username,polygons } = req.body;
+
+      console.log("Servser side Name   ::  ",username);
+      
+ //HNADLE ipfs ERROR HADLIng
+      const IPFS=await uploadJsonToIPFS(polygon);
+      console.log("IPFS  : ",IPFS);
+
+      // Convert from [{lat, lon}, ...] → [ [lon, lat], ... ]
+    const coords = polygons.map(p => [p.lon, p.lat]);
+        // Close polygon loop (important for Turf)
+    if (coords.length > 0 && 
+        (coords[0][0] !== coords[coords.length - 1][0] || 
+         coords[0][1] !== coords[coords.length - 1][1])) {
+      coords.push(coords[0]);
+    }
+    // Compute area using Turf (in square meters)
+    const turfPolygon = polygon([coords]);
+    const areaInSqMeters = area(turfPolygon);
+       
+    console.log("Polygon Area (m²):", areaInSqMeters);
+
     
-    if (!username || !polygons || !Array.isArray(polygons)) {
-      return res.status(400).json({
+    // const saveToDb
+
+    return res.status(200).json({
+    success: true,
+    message: "Polygon Saved Db successfully",
+    totalArea_m2: areaInSqMeters,
+    IPFS,
+  });
+ 
+      
+    } catch (error) {
+      console.error('Error fetching paths:', error);
+      res.status(500).json({
         success: false,
-        message: 'Username and polygons array are required'
+        message: 'Internal server error at server side api',
+        polygon:[]
       });
     }
-    console.log("--------------------------------------------------------------------------");
-    console.log(username);
-    console.log(polygons);
-    console.log("--------------------------------------------------------------------------");
-    
-    savePolygon(username,polygons);
-    // const { data, error } = await supabase
-    //   .from('UserPath')
-    //   .upsert({
-    //     UserName: username,
-    //     polygons: polygons, // This will be stored as JSONB[]
-    //     updated_at: new Date().toISOString()
-    //   }, {
-    //     onConflict: 'UserName'
-    //   })
-    //   .select();
+  });
 
-    // if (error) throw error;
-
-    res.status(200).json({
-      success: true,
-      message: 'Polygons saved successfully',
-      polygons: polygons.map(p => ({ name: p.name, points: p.points.length }))
-    });
-
-  } catch (error) {
-    console.error('Error saving polygons:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to save polygons'
-    });
-  }
-});
 
 
   const httpServer = createServer(app);
   return httpServer;
 }
-
-
-
-  
-
-
- 
