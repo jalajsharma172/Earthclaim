@@ -62,7 +62,7 @@ function Router() {
         {/* <Leaderboard /> */}
       </Route>
       <Route path="/dashboard">
-        {/* <Dashboard /> */}
+        <Dashboard />
       </Route>
       <Route path="/rewards">
         {/* <Rewards /> */}

@@ -1,25 +1,33 @@
-import { useState, type ChangeEvent, type MouseEvent } from 'react'
-import axios from 'axios'
-import dotenv from "dotenv";
+import axios from 'axios';
 
-dotenv.config(); // Load .env file
 export async function uploadJsonToIPFS(metadata: unknown): Promise<string> {
-    try{
-  const res = await axios({
-    method: 'post',
-    url: 'https://api.pinata.cloud/pinning/pinJSONToIPFS',
-    data: metadata,
-    headers: {
-      'Content-Type': 'application/json',
-      pinata_api_key: import.meta.env.VITE_PINATA_API_KEY,
-      pinata_secret_api_key: import.meta.env.VITE_PINATA_SECRET_API_KEY,
-    },
-  });
+  if (!metadata) {
+    console.error('IPFS Error: metadata is undefined');
+    return 'Error';
+  }
+  const key1=process.env.VITE_PINATA_API_KEY;
+  const key2=process.env.VITE_PINATA_SECRET_API_KEY;
+  if(!key1 || !key2 ){
+    console.error('IPFS Error: .env not accesable . ');
+    return 'Error';
+  }
+  try {
+    const res = await axios.post(
+      'https://api.pinata.cloud/pinning/pinJSONToIPFS',
+      metadata,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          pinata_api_key: key1,
+          pinata_secret_api_key: key2,
+        },
+      }
+    );
 
-  
-  const hash = res.data.IpfsHash as string;
-  return hash as string;
-    }catch(err){
-        return 'Error';
-    }
+    return res.data.IpfsHash as string;
+  } catch (err) {
+    console.log('IPFS Error:', err.response?.data || err);
+    return 'Error';
+  }
 }
+

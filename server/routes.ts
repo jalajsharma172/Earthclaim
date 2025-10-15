@@ -12,7 +12,7 @@ import { polygon } from "@turf/helpers";
 import area from "@turf/area";//Area calculator
 import { Position } from "geojson";
 import {UserPolygon} from '@shared/schema'
-
+import {deletePolygon} from "@shared/delete_Polygon"
  
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -131,14 +131,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Additional API to get all paths (optional)
   app.post("/api/save-polygons", async (req, res) => {
     try {
-      const {username,polygons } = req.body;
+      const {username,polygonName,polygons } = req.body;
+
+      if(!username || !polygonName || !polygon){
+        return res.status(404).json({
+          mmessage: "Unable to get info from api "
+        })
+      }
 
       console.log("Servser side Name   ::  ",username);
       
  //HNADLE ipfs ERROR HADLIng
-      const IPFS=await uploadJsonToIPFS(polygon);
+      
+      const IPFS=await uploadJsonToIPFS(polygons);
       console.log("IPFS  : ",IPFS);
-
+      if(IPFS=="Error"){
+         return res.status(401).json({
+          success: false,
+          message: "IPFS is not working"
+        });
+      }
       // Convert from [{lat, lon}, ...] → [ [lon, lat], ... ]
     const coords = polygons.map(p => [p.lon, p.lat]);
         // Close polygon loop (important for Turf)
@@ -155,14 +167,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     
     // const saveToDb
+    const polygonstatus=await savePolygon(username,polygonName,areaInSqMeters,IPFS)
+    if(polygonstatus.success==true){
+      
+      
+      // Clear UserPath Db.
+       
+      
+      
+      
+      return res.status(200).json({
+        success: true,
+        message: "Polygon Saved Db successfully",
+        totalArea_m2: areaInSqMeters,
+        IPFS,
+      });
 
-    return res.status(200).json({
-    success: true,
-    message: "Polygon Saved Db successfully",
-    totalArea_m2: areaInSqMeters,
-    IPFS,
-  });
- 
+
+
+
+
+
+   }else{
+   
+      return res.status(200).json({
+        success: false,
+        message: await polygonstatus.message,
+        totalArea_m2: areaInSqMeters,
+        IPFS,
+      });
+    }
+    
       
     } catch (error) {
       console.error('Error fetching paths:', error);
@@ -174,6 +209,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  app.delete("/api/delete-userpath",async (req,res) => {
+  try {
+      const {username } = req.body;
+
+      if(!username  ){
+        return res.status(200).json({
+          mmessage: "Unable to get info from api "
+        })
+      }
+
+      console.log("Servser side Name   ::  ",username);
+         
+    
+    // const saveToDb
+    const polygonstatus=await clearUserPath(username)
+    if(polygonstatus.success==true){
+      return res.status(200).json({
+        success: true,
+        message: "Polygon delete from  Db successfully"
+      });
+   }else{
+   
+      return res.status(200).json({
+        success: false
+      });
+    }
+    
+      
+    } catch (error) {
+      console.error('Error fetching paths:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error at server side api',
+       });
+    }
+  })
 
 
   const httpServer = createServer(app);

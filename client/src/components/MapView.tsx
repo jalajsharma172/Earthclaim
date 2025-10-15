@@ -425,20 +425,21 @@ const resetPath = () => {
     console.error('Cannot save polygon: Invalid data');
     return;
   }
+   axios.post('/api/save-polygons',{
+    username:userData.username,
+    polygonName:"Test Land",
+    polygons:userPath
+  }).then(()=>{
+              console.log("Polygon gets saved to the Db");
+ 
+              delteUserPathAsync();
+ 
+}).catch(()=>{
+    console.log("Polygon is NOT SAVED");
 
-  // const result = savePolygon(userData.username, userPath );
+  })
+   
   
-  // if (result.success) {
-  //   console.log('✅ Polygon saved to database!');
-    
-  //   // Show success message to user
-  //   if (result.data && result.data[0]) {
-  //     const savedPolygon = result.data[0];
-  //     console.log('Saved polygon data:', savedPolygon);
-  //   }
-  // } else {
-  //   console.error('❌ Failed to save polygon:', result.error);
-  // }
   };
 
 
@@ -523,6 +524,7 @@ const resetPath = () => {
           >
             🔍 Detect Loops
           </button>
+          
 
           <button
             onClick={resetPath}
@@ -561,6 +563,15 @@ const resetPath = () => {
             </button>
           )}
 
+          
+          <button 
+            style={{
+              ...buttonStyle,
+              backgroundColor: '#4f46e5'
+            }}
+          >
+             Show My NFTs
+          </button>
           
         </div>
       </div>

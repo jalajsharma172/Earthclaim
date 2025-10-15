@@ -1,31 +1,77 @@
+
+
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from "@shared/supabaseClient";
- 
-export const savePolygon = async (username: string, IPFS:string,Area:string) => {
-  try { 
+
+export async function savePolygon(username: string, polygonName: string, areaInSqMeters: number, IPFS: string) {
+  try {
+
+    // table name is 'UserPolygons' 
+    // Columns are id,UserName,JSON.
+
+    // First check does username exist or not .
+    // If do not exist then just add it directly.
+
+    // If username already exist in the table , then upload json and then push it again .
 
 
-    const PolygonIPFS={
-      IPFS:IPFS,
-      Area:Area
-    }
 
-
-    // Upsert (update or insert) the record
-    const { data, error } = await supabase
+    // First check if username exists or not
+    const { data: existingData, error: fetchError } = await supabase
       .from('UserPolygon')
-      .upsert({
-        UserName: username,
-        Polygon: PolygonIPFS
-      })
-      .select();
+      .select('Polygon')
+      .eq('UserName', username)
+      .single();
 
-    if (error) throw error;
-    
-    console.log('Polygon added successfully. Total polygons:', updatedPolygons.length);
-    return { data, success: true };
-    
+    // Prepare the new polygon object
+    const newPolygon = {
+      Name: polygonName,
+      Area: areaInSqMeters,
+      IPFShashcode: IPFS
+    };
+
+    if (fetchError) { 
+      // If user doesn't exist (error code PGRST116), create new record
+      if (fetchError.code === 'PGRST116') {
+        const { data, error } = await supabase
+          .from('UserPolygon')
+          .insert({
+            UserName: username,
+            Polygon: [newPolygon] // Directly use the array, not wrapped in object
+          })
+          .select();
+
+        if (error)  return { error, success: false, message: 'Polygon is not added to existing user' };
+        else  return { data, success: true, message: 'New user and polygon created' };
+      
+        }
+        else {
+        throw fetchError;
+      }
+    } else {
+      // User exists - update the existing Polygon array by adding new polygon
+      const currentPolygons = existingData.Polygon || [];
+      
+      // Add new polygon to existing polygon array
+      const updatedPolygons = [
+        ...currentPolygons,
+        newPolygon
+      ];
+
+      // Update the record with the new array
+      const { data, error } = await supabase
+        .from('UserPolygon')
+        .update({
+          Polygon: updatedPolygons // Update with the array directly
+        })
+        .eq('UserName', username)
+        .select();
+
+      if (error)  return { error, success: false, message: 'Polygon is not added to existing user' };
+      else return { data, success: true, message: 'Polygon added to existing user' };
+    }
   } catch (error) {
     console.error('Error adding polygon:', error);
-    return { data: null, success: false, error };
+    return { error, success: false, message: 'Failed to save polygon' };
   }
-};
+}

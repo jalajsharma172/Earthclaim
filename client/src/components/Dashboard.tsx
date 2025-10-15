@@ -181,7 +181,7 @@ export default function Dashboard() {
       // Get username from localStorage and fetch NFT data
       const username = getUsernameFromStorage();
       setCurrentUsername(username);
-      await fetchUserNFTData(username);
+      // await fetchUserNFTData(username);
       
       // Load blockchain data
       const tokennumber = await loadTokenCounter(newProvider);// number of users of same username.
@@ -266,51 +266,51 @@ export default function Dashboard() {
   };
 
   // Function to fetch user's NFT data from backend
-  const fetchUserNFTData = async (username: string) => {
-    if (!username || username === "Anonymous") {
-      console.log("fetchUserNFTData: No valid username provided:", username);
-      return;
-    }
+  // const fetchUserNFTData = async (username: string) => {
+  //   if (!username || username === "Anonymous") {
+  //     console.log("fetchUserNFTData: No valid username provided:", username);
+  //     return;
+  //   }
     
-    setLoadingNFTData(true);
-    try {
-      console.log("Fetching NFT data for username:", username);
-      const userNFTs = await userNFTAPI.getUserNFTsByUsername(username);
-      console.log("Fetched user NFTs:", userNFTs);
-      setUserNFTData(userNFTs);
+  //   setLoadingNFTData(true);
+  //   try {
+  //     console.log("Fetching NFT data for username:", username);
+  //     const userNFTs = await userNFTAPI.getUserNFTsByUsername(username);
+  //     console.log("Fetched user NFTs:", userNFTs);
+  //     setUserNFTData(userNFTs);
       
-      // If no NFTs exist, create a test one for demo
-      // if (userNFTs.length === 0) {
-      //   console.log("No NFTs found, creating test NFT for demo");
-      //   await saveNFTHash(username, `demo_hash_${Date.now()}`);
-      // }
-    } catch (err) {
-      console.error("Error fetching user NFT data:", err);
-      console.log("API might be down, creating demo NFT");
-      // If API fails, create a demo NFT
-      try {
-        await saveNFTHash(username, `demo_hash_${Date.now()}`);
-      } catch (saveErr) {
-        console.error("Failed to create demo NFT:", saveErr);
-        setError("Failed to load your NFT data - API connection failed");
-      }
-    } finally {
-      setLoadingNFTData(false);
-    }
-  };
+  //     // If no NFTs exist, create a test one for demo
+  //     // if (userNFTs.length === 0) {
+  //     //   console.log("No NFTs found, creating test NFT for demo");
+  //     //   await saveNFTHash(username, `demo_hash_${Date.now()}`);
+  //     // }
+  //   } catch (err) {
+  //     console.error("Error fetching user NFT data:", err);
+  //     console.log("API might be down, creating demo NFT");
+  //     // If API fails, create a demo NFT
+  //     try {
+  //       await saveNFTHash(username, `demo_hash_${Date.now()}`);
+  //     } catch (saveErr) {
+  //       console.error("Failed to create demo NFT:", saveErr);
+  //       setError("Failed to load your NFT data - API connection failed");
+  //     }
+  //   } finally {
+  //     setLoadingNFTData(false);
+  //   }
+  // };
 
   // Function to save NFT hash to database
-  const saveNFTHash = async (username: string, hashcode: string) => {
-    try {
-      await userNFTAPI.createUserNFT(username, hashcode);
-      console.log("Data Saved for Dashboard for user:", username, "Hash:", hashcode);
-      // Refresh the NFT data to show the new entry
-      await fetchUserNFTData(username);
-    } catch (err) {
-      console.error("Error saving NFT hash:", err);
-      setError("Failed to save NFT hash");
-    }
-  };
+  // const saveNFTHash = async (username: string, hashcode: string) => {
+  //   try {
+  //     await userNFTAPI.createUserNFT(username, hashcode);
+  //     console.log("Data Saved for Dashboard for user:", username, "Hash:", hashcode);
+  //     // Refresh the NFT data to show the new entry
+  //     await fetchUserNFTData(username);
+  //   } catch (err) {
+  //     console.error("Error saving NFT hash:", err);
+  //     setError("Failed to save NFT hash");
+  //   }
+  // };
 
   const connectWallet = async () => {
     if (typeof window.ethereum === "undefined") {
