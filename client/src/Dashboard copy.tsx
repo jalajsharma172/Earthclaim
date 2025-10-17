@@ -1,16 +1,33 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ethers } from "ethers";
-import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate JSON file
-// import { userNFTAPI } from "../App"; // Import userNFT API functions
-import {BrowserStorageService} from "@shared/login";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate JSON file 
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 interface NFT {
   area: string;
   hash: string;
   tokenURI: string;
 }
+
+  // Replace with your actual contract address
+  // Check initial wallet connection and set up listeners
+  // Update user-specific data when address changes
+
+
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS ;
+
+const mockNFTs: NFT[] = [
+  { area: "Area 51", hash: "0xabc123", tokenURI: "ipfs://QmArea51Metadata" },
+  { area: "Area 52", hash: "0xdef456", tokenURI: "ipfs://QmArea52Metadata" },
+  { area: "Area 53", hash: "0xghi789", tokenURI: "ipfs://QmArea53Metadata" },
+  { area: "Area 54", hash: "0xjkl012", tokenURI: "ipfs://QmArea54Metadata" },
+  { area: "Area 55", hash: "0xmnq345", tokenURI: "ipfs://QmArea55Metadata" },
+];
 
 // Connection status types
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
@@ -25,7 +42,6 @@ interface UserNFTData {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [userAddress, setUserAddress] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const [error, setError] = useState<string>("");
@@ -41,15 +57,114 @@ export default function Dashboard() {
   const [loadingNFTData, setLoadingNFTData] = useState<boolean>(false);
   const [currentUsername, setCurrentUsername] = useState<string>("");
 
-  // NFT storage
-   const [nftData, setNftData] = useState(null);
-  const [loading, setLoading] = useState(false); 
-  const [username, setUsername] = useState('');
- 
+    // Check initial wallet connection and set up listeners
+  // handleSuccessfulConnection---setUserAddress(address);// Form----// Load blockchain data
+  //resetConnection
 
+  useEffect(() => {
+    initializeWalletConnection();
+    
+    // Also fetch NFT data even if wallet is not connected
+    const username = getUsernameFromStorage();
+    setCurrentUsername(username);
+    if (username !== "Anonymous") {
+      fetchUserNFTData(username);
+    }
+    
+    // Cleanup listeners on unmount
+    return () => {
+      removeEventListeners();
+    };
+  }, []);
 
-  
- // SEt --setProvider    ,     setSigner      ,      setCurrentUsername    | | fetchAndSaveNFTs
+  // Update user-specific data when address changes
+  useEffect(() => {
+    if (userAddress && provider) {
+      loadUserData();
+    } else {
+      setUserNFTCount(0);
+    }
+  }, [userAddress, provider]);
+
+  const initializeWalletConnection = async () => {
+    if (typeof window.ethereum === "undefined") {
+      setConnectionStatus("disconnected");
+      return;
+    }
+
+    try {
+      // Check if already connected
+      const accounts = await window.ethereum.request({ 
+        method: "eth_accounts" 
+      });
+      
+      if (accounts.length > 0) {
+        await handleSuccessfulConnection(accounts[0]);
+      } else {
+        setConnectionStatus("disconnected");
+      }
+
+      // Set up event listeners for real-time updates
+      setupEventListeners();
+
+    } catch (err) {
+      console.error("Error initializing wallet connection:", err);
+      setConnectionStatus("error");
+      setError("Failed to initialize wallet connection");
+    }
+  };
+
+  const setupEventListeners = () => { 
+    if (window.ethereum) {
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on("chainChanged", handleChainChanged);
+      window.ethereum.on("connect", handleConnect);
+      window.ethereum.on("disconnect", handleDisconnect);
+    }
+  };
+
+  const removeEventListeners = () => {
+    if (window.ethereum) {
+      window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+      window.ethereum.removeListener("chainChanged", handleChainChanged);
+      window.ethereum.removeListener("connect", handleConnect);
+      window.ethereum.removeListener("disconnect", handleDisconnect);
+    }
+  };
+
+  const handleAccountsChanged = async (accounts: string[]) => {
+    console.log("Accounts changed:", accounts); 
+    
+    if (accounts.length === 0) {
+      // User disconnected all accounts via MetaMask UI
+      handleDisconnect();
+    } else {
+      // User switched accounts
+      await handleSuccessfulConnection(accounts[0]);
+    }
+  };
+
+  const handleChainChanged = (chainId: string) => {
+    console.log("Chain changed:", chainId); 
+    window.location.reload();
+  };
+
+  const handleConnect = async (connectInfo: any) => {
+    console.log("Wallet connected:", connectInfo);
+    // When wallet connects, check accounts
+    const accounts = await window.ethereum.request({ method: "eth_accounts" });
+    if (accounts.length > 0) {
+      await handleSuccessfulConnection(accounts[0]);
+    }
+  };
+
+  const handleDisconnect = (error?: any) => {
+    console.log("Wallet disconnected:", error);
+    resetConnection();
+    setConnectionStatus("disconnected");
+    setError(error?.message || "Wallet disconnected");
+  };
+
   const handleSuccessfulConnection = async (address: string) => {
     try {
       setUserAddress(address);// Form
@@ -63,22 +178,17 @@ export default function Dashboard() {
       setProvider(newProvider);
       setSigner(newSigner);
       
-      const userData = await BrowserStorageService.getUserFromStorage();
-      console.log("User data from storage:", userData);
-      
-      // Handle both structures: { userData: {...} } or direct {...}
-      const actualUserData = userData?.userData ? userData.userData : userData;
-      const username = actualUserData?.username ?? "";
-      console.log("Extracted username:", username);
-      console.log("Username length:", username.length);
+      // Get username from localStorage and fetch NFT data
+      const username = getUsernameFromStorage();
       setCurrentUsername(username);
+      // await fetchUserNFTData(username);
       
-      if (username && username.trim() !== "") {
-        fetchAndSaveNFTs(username);
-      } else {
-        console.log("No valid username found, skipping NFT fetch");
-        setError("Please login first to fetch your NFTs");
-      }
+      // Load blockchain data
+      const tokennumber = await loadTokenCounter(newProvider);// number of users of same username.
+      setTokenCounter(tokennumber);
+      await loadUserData();
+
+      
     } catch (err) {
       console.error("Error in successful connection:", err);
       setConnectionStatus("error");
@@ -86,8 +196,6 @@ export default function Dashboard() {
     }
   };
 
- 
-// reset
   const resetConnection = () => {
     setUserAddress("");
     setProvider(null);
@@ -101,7 +209,109 @@ export default function Dashboard() {
     setLoadingNFTData(false);
   };
 
-  // Connect button >eth_requestAccounts -> calling handleSuccessfulConnection() for popup accuount selection
+
+
+  const loadTokenCounter = async (providerInstance?: ethers.BrowserProvider) => {
+    // const prov = providerInstance ;
+    // if (!prov) {
+    //   console.log("Db not working ");
+    //   return;
+    // }
+
+    // try {
+    //   const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, prov);
+    //   const counter = await contract.tokenCounter();
+    //   setTokenCounter(Number(counter));
+    // } catch (err) {
+    //   console.error("Error loading token counter:", err);
+    // }
+    return 101;
+  };
+
+  const loadUserData = async () => {
+    if (!provider || !userAddress) return;
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, provider);
+      const balance = await contract.balanceOf(userAddress);
+      setUserNFTCount(Number(balance));
+    } catch (err) {
+      console.error("Error loading user NFT count:", err);
+    }
+  };
+
+  // Function to get username from localStorage (same as registration)
+  const getUsernameFromStorage = (): string => {
+    try {
+      const savedUser = localStorage.getItem('territoryWalkerUser');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.username) {
+          console.log("Retrieved username from localStorage:", parsed.username);
+          return parsed.username;
+        }
+      }
+    } catch (error) {
+      console.error("Error retrieving username from localStorage:", error);
+    }
+    
+    console.log("No username found in localStorage, using 'Anonymous'");
+    return "Anonymous";
+  };
+
+  // Function to check if user is properly logged in
+  const isUserLoggedIn = (): boolean => {
+    const username = getUsernameFromStorage();
+    return username !== "Anonymous" && username.trim() !== "";
+  };
+
+  // Function to fetch user's NFT data from backend
+  // const fetchUserNFTData = async (username: string) => {
+  //   if (!username || username === "Anonymous") {
+  //     console.log("fetchUserNFTData: No valid username provided:", username);
+  //     return;
+  //   }
+    
+  //   setLoadingNFTData(true);
+  //   try {
+  //     console.log("Fetching NFT data for username:", username);
+  //     const userNFTs = await userNFTAPI.getUserNFTsByUsername(username);
+  //     console.log("Fetched user NFTs:", userNFTs);
+  //     setUserNFTData(userNFTs);
+      
+  //     // If no NFTs exist, create a test one for demo
+  //     // if (userNFTs.length === 0) {
+  //     //   console.log("No NFTs found, creating test NFT for demo");
+  //     //   await saveNFTHash(username, `demo_hash_${Date.now()}`);
+  //     // }
+  //   } catch (err) {
+  //     console.error("Error fetching user NFT data:", err);
+  //     console.log("API might be down, creating demo NFT");
+  //     // If API fails, create a demo NFT
+  //     try {
+  //       await saveNFTHash(username, `demo_hash_${Date.now()}`);
+  //     } catch (saveErr) {
+  //       console.error("Failed to create demo NFT:", saveErr);
+  //       setError("Failed to load your NFT data - API connection failed");
+  //     }
+  //   } finally {
+  //     setLoadingNFTData(false);
+  //   }
+  // };
+
+  // Function to save NFT hash to database
+  // const saveNFTHash = async (username: string, hashcode: string) => {
+  //   try {
+  //     await userNFTAPI.createUserNFT(username, hashcode);
+  //     console.log("Data Saved for Dashboard for user:", username, "Hash:", hashcode);
+  //     // Refresh the NFT data to show the new entry
+  //     await fetchUserNFTData(username);
+  //   } catch (err) {
+  //     console.error("Error saving NFT hash:", err);
+  //     setError("Failed to save NFT hash");
+  //   }
+  // };
+
   const connectWallet = async () => {
     if (typeof window.ethereum === "undefined") {
       setConnectionStatus("error");
@@ -131,7 +341,7 @@ export default function Dashboard() {
       }
     }
   };
-  // 4 Methods to disconnect wallet at any cost 
+
   const disconnectWallet = async () => {
     try {
       // Method 1: Try to use MetaMask's disconnect method (if available)
@@ -192,130 +402,62 @@ export default function Dashboard() {
       setError("Disconnected from application (MetaMask connection maintained)");
     }
   };
-  // Hiding Walllet Address
-  const formatAddress = (address: string): string => {
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-  };  
-  // button Color
-  const getConnectionStatusColor = () => {
-    switch (connectionStatus) {
-      case "connected": return "bg-green-500";
-      case "connecting": return "bg-yellow-500 animate-pulse";
-      case "error": return "bg-red-500";
-      default: return "bg-gray-400";
-    }
-  };
-  // status color
-  const getConnectionStatusText = () => {
-    switch (connectionStatus) {
-      case "connected": return "Connected";
-      case "connecting": return "Connecting...";
-      case "error": return "Connection Error";
-      default: return "Disconnected";
-    }
-  };
+
   // Alternative disconnect method that always works
   const forceDisconnect = () => {
     resetConnection();
     setConnectionStatus("disconnected");
     setError("Disconnected from application. To fully disconnect, please use MetaMask's interface.");
   };
- 
 
-    const fetchAndSaveNFTs = async (username:string) => {
-      console.log("=== fetchAndSaveNFTs called ===");
-      console.log("Username parameter:", username);
-      console.log("Username type:", typeof username);
-      console.log("Username truthy check:", !!username);
-    
-      
-        setLoading(true); 
-        
-        try {
-          const requestData = { username: username };
-          console.log("Sending request data:", requestData);
-          console.log("Request URL:", '/api/get-nfts');
-          console.log("Axios config:", {
-            method: 'POST',
-            url: '/api/get-nfts',
-            data: requestData
-          });
-          
-          const response = await axios.post('/api/get-nfts', requestData);
-          
-          
-          if (response.data.success && response.data.status) {
-            console.log('NFT data received:', response.data.JSON);
-            
-            setNftData(response.data.JSON); // Save JSON to state
-            setError(''); // Clear any previous errors
-            
-            console.log('NFT data saved successfully');
-          } else {
-            const errorMessage = response.data.message || 'Failed to fetch NFT data';
-            setError(errorMessage);
-            setNftData(null);
-            console.error('API Error:', errorMessage);
-          }
-        } catch (error) {
-          console.error('Network error:', error);
-          setError('Failed to fetch NFTs. Please check your connection.');
-          setNftData(null);
-        } finally {
-          setLoading(false);
-        }
-                console.log(nftData);
-
-      };
- 
-  
-  //Mint A NFT
   const mintNFT = async (nft: NFT) => {
-  if (connectionStatus !== "connected" || !userAddress || !signer) {
-    setError("Please connect your wallet first!");
-    return;
-  }
+    if (connectionStatus !== "connected" || !userAddress || !signer) {
+      setError("Please connect your wallet first!");
+      return;
+    }
 
-  setClaimingNFT(nft.area);
-  setError("");
-  setTransactionHash("");
+    setClaimingNFT(nft.area);
+    setError("");
+    setTransactionHash("");
 
-  try {
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
 
-    // Execute the mintNFT transaction  
-    const transaction = await contract.mintNFT(nft.tokenURI);
-    
-    setTransactionHash(transaction.hash);
-    
-    // Wait for transaction confirmation
-    const receipt = await transaction.wait();
-    
-    if (receipt.status === 1) {
-      // Transaction successful
-      alert(`Successfully minted NFT for ${nft.area}! Transaction: ${transaction.hash}`);
+      // Execute the mintNFT transaction  
+      const transaction = await contract.mintNFT(nft.tokenURI);
       
-      // Update counte 
-    } else {
-      throw new Error("Transaction failed");
-    }
+      setTransactionHash(transaction.hash);
+      
+      // Wait for transaction confirmation
+      const receipt = await transaction.wait();
+      
+      if (receipt.status === 1) {
+        // Transaction successful
+        alert(`Successfully minted NFT for ${nft.area}! Transaction: ${transaction.hash}`);
+        
+        // Update counters
+        await loadTokenCounter();
+        await loadUserData();
+        
+      } else {
+        throw new Error("Transaction failed");
+      }
 
-  } catch (err: any) {
-    console.error("Error minting NFT:", err);
-    
-    if (err.code === "ACTION_REJECTED") {
-      setError("Transaction was rejected by user");
-    } else if (err.code === "INSUFFICIENT_FUNDS") {
-      setError("Insufficient funds for transaction");
-    } else {
-      setError(err.message || "Failed to mint NFT");
+    } catch (err: any) {
+      console.error("Error minting NFT:", err);
+      
+      if (err.code === "ACTION_REJECTED") {
+        setError("Transaction was rejected by user");
+      } else if (err.code === "INSUFFICIENT_FUNDS") {
+        setError("Insufficient funds for transaction");
+      } else {
+        setError(err.message || "Failed to mint NFT");
+      }
+    } finally {
+      setClaimingNFT(null);
     }
-  } finally {
-    setClaimingNFT(null);
-  }
   };
 
- 
   // Function to mint NFT from user's saved hash
   const mintNFTFromHash = async (nft: UserNFTData) => {
     if (connectionStatus !== "connected" || !userAddress || !signer) {
@@ -347,12 +489,16 @@ export default function Dashboard() {
         
         // Update the NFT as minted in database
         try {
-          // await userNFTAPI.updateUserNFTMintedStatus(nft.id, true);
+          await userNFTAPI.updateUserNFTMintedStatus(nft.id, true);
           console.log("Updated NFT minted status in database");
         } catch (updateErr) {
           console.error("Failed to update minted status:", updateErr);
         }
-         
+        
+        // Update counters and refresh data
+        await loadTokenCounter();
+        await loadUserData();
+        await fetchUserNFTData(currentUsername);
         
       } else {
         throw new Error("Transaction failed");
@@ -371,19 +517,29 @@ export default function Dashboard() {
     } finally {
       setClaimingNFT(null);
     }
-  } ;
-
-  
-  const isUserLoggedIn = (): boolean => { 
-    return currentUsername !== "Anonymous" && currentUsername.trim() !== "";
   };
 
+  const formatAddress = (address: string): string => {
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
 
+  const getConnectionStatusColor = () => {
+    switch (connectionStatus) {
+      case "connected": return "bg-green-500";
+      case "connecting": return "bg-yellow-500 animate-pulse";
+      case "error": return "bg-red-500";
+      default: return "bg-gray-400";
+    }
+  };
 
-
-
-  
-
+  const getConnectionStatusText = () => {
+    switch (connectionStatus) {
+      case "connected": return "Connected";
+      case "connecting": return "Connecting...";
+      case "error": return "Connection Error";
+      default: return "Disconnected";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4 md:p-8">
@@ -395,80 +551,6 @@ export default function Dashboard() {
           </h1>
           <p className="text-gray-600 text-lg">Mint your digital land NFTs on the blockchain</p>
           
-        {/**Button for leaderboard,exhccage,reward */} 
-  <div className="max-w-7xl mx-auto">
-    {/* Header */}
-    <div className="mb-8 text-center">
-   
-      {/* Three Action Buttons - Production Ready */}
-      <div className="flex flex-col items-center mt-8 mb-6">
-        <div className="flex flex-wrap justify-center gap-4 w-full max-w-2xl">
-          {/* Leaderboard Button */}
-          <button
-            onClick={() => navigate('/leaderboard')}
-            className="group relative flex-1 min-w-[200px] max-w-[280px] px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-lg">🏆</span>
-              <span className="text-base">Leaderboard</span>
-            </div>
-            <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/30 transition-colors duration-300"></div>
-          </button>
-
-          {/* Exchange NFTs Button */}
-          <button
-            onClick={() => navigate('/nftexchange')}
-            className="group relative flex-1 min-w-[200px] max-w-[280px] px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-lg">🔄</span>
-              <span className="text-base">Exchange NFTs</span>
-            </div>
-            <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/30 transition-colors duration-300"></div>
-          </button>
-
-          {/* Earn Reward Button */}
-          <button
-            onClick={() => navigate('/earnbywalk')}
-            className="group relative flex-1 min-w-[200px] max-w-[280px] px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-xl shadow-lg transition-all duration-300 transform hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]"
-          >
-            <div className="flex items-center justify-center gap-3">
-              <span className="text-lg">💰</span>
-              <span className="text-base">Earn Reward</span>
-            </div>
-            <div className="absolute inset-0 rounded-xl border-2 border-white/20 group-hover:border-white/30 transition-colors duration-300"></div>
-          </button>
-        </div>
-        
-        {/* Decorative Line Below Buttons */}
-        <div className="w-full max-w-2xl mt-6 mb-4">
-          <div className="h-px bg-gradient-to-r from-transparent via-purple-300 to-transparent"></div>
-        </div>
-      </div>
-      
-      {/* Rest of your existing welcome messages remain here */}
-      {connectionStatus === "connected" && currentUsername && currentUsername !== "Anonymous" && (
-        <div className="mt-4 inline-block">
-          <div className="px-6 py-3 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full border border-indigo-200">
-            <p className="text-indigo-800 font-semibold">
-              Welcome back, <span className="font-mono font-bold text-purple-700">{currentUsername}</span>! 👋
-            </p>
-          </div>
-        </div>
-      )}
-      </div> 
-      
-      {connectionStatus === "connected" && (currentUsername === "Anonymous" || !currentUsername) && (
-        <div className="mt-4 inline-block">
-          <div className="px-6 py-3 bg-gradient-to-r from-orange-100 to-red-100 rounded-full border border-orange-200">
-            <p className="text-orange-800 font-semibold">
-              Please <a href="/" className="underline text-red-700 hover:text-red-900">login or register</a> to see your NFTs
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-
           {/* Welcome Message with Username */}
           {connectionStatus === "connected" && currentUsername && currentUsername !== "Anonymous" && (
             <div className="mt-4 inline-block">
@@ -490,6 +572,34 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+          
+          {/* Navigation Menu */}
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
+            <a 
+              href="/dashboard"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-purple-600 font-semibold border-2 border-purple-200 hover:border-purple-400"
+            >
+              🏠 Dashboard
+            </a>
+            <a 
+              href="/map"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-blue-600 font-semibold border-2 border-blue-200 hover:border-blue-400"
+            >
+              🗺️ Map View
+            </a>
+            <a 
+              href="/rewards"
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 font-semibold hover:from-purple-600 hover:to-pink-600 transform hover:scale-105"
+            >
+              🎁 Earn Rewards
+            </a>
+            <a 
+              href="/leaderboard"
+              className="px-6 py-3 bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-gray-700 hover:text-green-600 font-semibold border-2 border-green-200 hover:border-green-400"
+            >
+              🏆 Leaderboard
+            </a>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -722,7 +832,7 @@ export default function Dashboard() {
 
                 {connectionStatus === "connected" && isUserLoggedIn() && (
                   <div className="bg-white rounded-xl p-4 shadow-md">
-                    <div className="text-sm text-gray-700 mb-2">Username1:</div>
+                    <div className="text-sm text-gray-700 mb-2">Username:</div>
                     <div className="font-mono font-bold text-indigo-600">{currentUsername}</div>
                   </div>
                 )}
@@ -762,38 +872,31 @@ export default function Dashboard() {
                         ➕ Test
                       </button>
                       <button
-                        onClick={() => fetchUserNFTData(currentUsername)}
+                        onClick={() => {
+                          console.log("Manual refresh clicked for user:", currentUsername);
+                          fetchUserNFTData(currentUsername);
+                        }}
                         disabled={loadingNFTData}
                         className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors disabled:opacity-50"
                         title="Refresh NFT data"
                       >
-                        🔄
+                        🔄 Load
+                      </button>
+                      <button
+                        onClick={() => {
+                          console.log("Force creating demo NFT for:", currentUsername);
+                          saveNFTHash(currentUsername, `demo_${Date.now()}`);
+                        }}
+                        disabled={loadingNFTData}
+                        className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded transition-colors disabled:opacity-50"
+                        title="Create demo NFT"
+                      >
+                        🆕 Demo
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {/* Render server-returned JSON (set via setNftData) */}
-                    {nftData && Array.isArray(nftData) && (
-                      <div className="mb-4 bg-white rounded-xl p-4 shadow-md">
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">Server NFTs</h3>
-                        <div className="space-y-2">
-                          {nftData.map((item: any, idx: number) => (
-                            <div key={idx} className="p-3 border rounded-lg">
-                              <div className="font-semibold text-gray-800">{item.Name || 'Unnamed'}</div>
-                              <div className="text-sm text-gray-600">Area: {typeof item.Area === 'number' ? item.Area.toLocaleString() : item.Area}</div>
-                              <div className="text-sm text-indigo-600 break-all">IPFS: <a href={`https://ipfs.io/ipfs/${item.IPFShashcode}`} target="_blank" rel="noreferrer" className="underline">{item.IPFShashcode}</a></div>
-                              <button
-                                onClick={() => navigate('/view-polygon', { state: { ipfsHash: item.IPFShashcode }})}
-                                className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
-                              >
-                                🗺️ View on Map
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                     {loadingNFTData ? (
                       <div className="text-center py-8">
                         <div className="w-8 h-8 border-4 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
@@ -803,6 +906,11 @@ export default function Dashboard() {
                       <div className="text-center py-8">
                         <p className="text-purple-600 mb-2">No NFTs available</p>
                         <p className="text-sm text-purple-500">Create polygons in MapView to generate NFTs!</p>
+                        <div className="mt-4 text-xs text-gray-500">
+                          <p>Username: {currentUsername}</p>
+                          <p>Data Length: {userNFTData.length}</p>
+                          <p>Loading: {loadingNFTData ? 'Yes' : 'No'}</p>
+                        </div>
                       </div>
                     ) : (
                       userNFTData.map((nft, idx) => (
@@ -892,7 +1000,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-
-
- 

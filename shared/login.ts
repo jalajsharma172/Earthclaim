@@ -30,7 +30,7 @@ export class BrowserStorageService {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const userData = JSON.parse(stored);
-        console.log( userData);
+        console.log("getUserFromStorage : ", userData);
         return userData;
       }
       return null;

@@ -4,10 +4,23 @@ import { serveStatic, log } from "./vite";
 import { initializeDatabase } from "./dbInit";
 import { type Server } from "http";
 import { registerRoutes } from "./routes";
-import { detectClosedLoopsHandler } from "./loop_detection.ts";
 
 export async function createExpressApp(): Promise<{ app: express.Express; server: Server }> {
   const app = express();
+  
+  // Add CORS headers
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+    } else {
+      next();
+    }
+  });
+  
   app.use(express.json());
   app.use(express.urlencoded({ extended: false }));
 
@@ -50,19 +63,6 @@ export async function createExpressApp(): Promise<{ app: express.Express; server
     const message = err.message || "Internal Server Error";
     res.status(status).json({ message });
   });
-
-app.post('/api/detect-loops', (req, res) => {
-    // Let detectClosedLoopsHandler handle sending the response
-
-    try {
-      const detect= detectClosedLoopsHandler(req, res);
-      console.log(detect);
-       
-    } catch (err) {
-      console.log('Error in detection python file ',err);
-      
-    }
-});
 
 
 

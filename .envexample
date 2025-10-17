@@ -1,30 +1,26 @@
-# Database Configuration
-# You need to set up a PostgreSQL database and provide either:
-# Option 1: Complete DATABASE_URL
 DATABASE_URL= 
-VITE_DATABASE_URL= 
 NODE_ENV=development
+ 
 
-VITE_PINATA_API_KEY=
-VITE_PINATA_SECRET_API_KEY=
-VITE_JWT=
+VITE_PINATA_API_KEY= 
+VITE_PINATA_SECRET_API_KEY= 
+ 
 
-VITE_CONTRACT_ADDRESS=
-
-VITE_SUPABASE_URL=
-VITE_SUPABASE_KEY=
 
 PORT=5000
-# Option 2: Individual PostgreSQL environment variables
-# PGHOST=localhost
-# PGPORT=5432
-# PGUSER=your_username
-# PGPASSWORD=your_password
-# PGDATABASE=territory_walker
 
-# Application Configuration
-NODE_ENV=development
+VITE_SUPABASE_URL= 
+VITE_SUPABASE_KEY= 
+
+SUPABASE_URL= 
+SUPABASE_KEY= 
 
 
-# Optional: For production deployments
-# NODE_ENV=production
+# Web3 Stuff- demo rpc url
+VITE_PROVIDER= 
+
+
+# kwala contract
+VITE_CONTRACT_ADDRESS= 
+
+ 

@@ -13,6 +13,8 @@ import area from "@turf/area";//Area calculator
 import { Position } from "geojson";
 import {UserPolygon} from '@shared/schema'
 import {deletePolygon} from "@shared/delete_Polygon"
+import { detectClosedLoopsHandler } from "./loop_detection.ts";
+import {getPolygonJSON} from "@shared/Get_Polygons.ts"
  
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -167,6 +169,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     
     // const saveToDb
+    console.log(username,polygonName,areaInSqMeters,IPFS);
+    
     const polygonstatus=await savePolygon(username,polygonName,areaInSqMeters,IPFS)
     if(polygonstatus.success==true){
       
@@ -210,6 +214,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+
+app.post("/api/get-nfts", async (req, res) => {
+  try {
+    console.log("=== /api/get-nfts endpoint called ===");
+    console.log("Request method:", req.method);
+    console.log("Request headers:", req.headers);
+    console.log("Request body:", req.body);
+    console.log("Request body type:", typeof req.body);
+    console.log("Request body keys:", Object.keys(req.body || {}));
+    
+    const { username } = req.body;
+    console.log("Extracted username:", username);
+    console.log("Username type:", typeof username);
+    console.log("Username truthy check:", !!username);
+    
+    if(!username){
+      console.log("Username is missing or empty - returning 400");
+      return res.status(400).json({
+        success: false, 
+        message:'No UserName found at API'
+      });
+    }
+    // Get JSON From 'UserPolygon' Table - AWAIT the promise
+    const result = await getPolygonJSON(username);
+
+ 
+ 
+    // For clarity, extract the properties if present
+    const nftJson = result.JSON || null;
+    const msg = result.message || 'No data available';
+
+    console.log('NFT JSON data:', nftJson);
+    
+    if(nftJson){
+      res.status(200).json({
+        success: true,
+        status: true,
+        JSON: nftJson
+      });
+    }else{
+      res.status(404).json({
+        success: false,
+        status: false,
+        message: 'No NFT data found for user'
+      });
+    }    
+ 
+  } catch (error) {
+    // console.error('Error in /api/get-nfts:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Internal server error',
+      error: error 
+    });
+  }
+});
+
+
   app.delete("/api/delete-userpath",async (req,res) => {
   try {
       const {username } = req.body;
@@ -246,6 +308,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
        });
     }
   })
+  
+app.post('/api/detect-loops', (req, res) => {
+    // Let detectClosedLoopsHandler handle sending the response
+    try {
+      const detect= detectClosedLoopsHandler(req, res);
+      console.log(detect);
+       
+    } catch (err) {
+      console.log('Error in detection python file ',err);
+      
+    }
+});
+
 
 
   const httpServer = createServer(app);

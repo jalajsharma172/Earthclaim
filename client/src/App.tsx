@@ -11,6 +11,9 @@ import MapView from "./components/MapView"
 import NotFound from "./pages/not-found";
 import { BrowserStorageService, type UserData } from "@shared/login";
 import Home from "./pages/home";
+import NFTPolygonViewer from "./components/NFTPolygonViewer";
+
+
 
 function Router() {
   const [user, setUser] = useState<UserData | null>(null);
@@ -20,7 +23,7 @@ function Router() {
   useEffect(() => {
     const loadUser = async () => {
       const storedUser = await BrowserStorageService.getUserFromStorage();
-      if (storedUser) setUser(storedUser);
+      if (storedUser!=null) setUser(storedUser);
       setIsLoading(false);
     };
     loadUser();
@@ -59,13 +62,16 @@ function Router() {
         <MapView />
       </Route>
       <Route path="/leaderboard">
-        {/* <Leaderboard /> */}
+        <Leaderboard />
       </Route>
       <Route path="/dashboard">
         <Dashboard />
       </Route>
-      <Route path="/rewards">
-        {/* <Rewards /> */}
+      <Route path="/earnbywalk">
+        <Rewards />
+      </Route>
+      <Route path="/view-polygon">
+        <NFTPolygonViewer />
       </Route>
 
       <Route path="/">

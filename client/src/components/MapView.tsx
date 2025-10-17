@@ -49,6 +49,8 @@ function MapView() {
   });
   const [isTracking, setIsTracking] = useState(true);
   const [isLoopClosed, setIsLoopClosed] = useState(false);
+  const [polygonName, setPolygonName] = useState<string>('');
+  const [showNameForm, setShowNameForm] = useState(false);
   
   // Fixed: Use state for timer instead of var
   const [timerInterval, setTimerInterval] = useState(3000);
@@ -134,24 +136,25 @@ useEffect(() => {
     // Initialize polyline immediately
     pathPolylineRef.current = L.polyline([], { color: 'blue', weight: 4 }).addTo(mapRef.current);
 
-    // Get User Data
-    BrowserStorageService.getUserFromStorage().then(async(userinfo) => {
-      if (!userinfo?.userData?.username) {
+    // Get User Data (handle both shapes: { userData } wrapper or direct object)
+    BrowserStorageService.getUserFromStorage().then(async (userinfo: any) => {
+      const info = userinfo?.userData ? userinfo.userData : userinfo;
+      if (!info?.username) {
         console.error("No user data found");
         return;
       }
-      
+
       setUserData({
-        username: userinfo.userData.username,
-        useremail: userinfo.userData.useremail,
+        username: info.username,
+        useremail: info.useremail,
         userpath: []
       });
-      
-      console.log("UserInfo : ", userinfo.userData.username);    
+
+      console.log("UserInfo : ", info.username);
       console.log("Db User Path ............");
-      const path = await getUserPathDirectly(userinfo.userData.username);
+      const path = await getUserPathDirectly(info.username);
       console.log("Loaded path:", path);
-      setUserPath(path || []); // Ensure it's always an array        
+      setUserPath(path || []); // Ensure it's always an array
     }).catch(error => {
       console.error("Error loading user data:", error);
     });
@@ -160,7 +163,7 @@ useEffect(() => {
  
 
 
-// UserPath
+// Save UserPath
   const saveUserPathAsync = async () => {
   try {
     if (!userData || !userData.username) {
@@ -185,39 +188,8 @@ useEffect(() => {
 }
 
  
-//  const getUserPathDirectly = async (username: string) => {
-//   try {
-//     const result = await getUserPathByUsername(username);
-    
-//     if (result.success === false) {
-//       console.error("Error:", result.data);
-//       return []; // Return empty array instead of null
-//     }
-    
-//     console.log("User path:", result.data);
-    
-//     // Ensure we always return an array
-//     if (Array.isArray(result.data)) {
-//       return result.data;
-//     } else if (result.data) {
-//       // If it's a single object, wrap it in array
-//       return [result.data];
-//     } else {
-//       return [];
-//     }
-//   } catch (error) {
-//     console.error("Error:", error);
-//     return []; // Return empty array instead of null
-//   }
-// }; 
 
-
-
-
-// 3. Create LINE
-
-
-
+//Fetch UserPath
 const getUserPathDirectly = async (username: string) => {
   try {
     if (!username) {
@@ -255,7 +227,7 @@ const getUserPathDirectly = async (username: string) => {
   }
 };
 
-
+// Print UserPath
 useEffect(() => {
   if (!mapRef.current) return;
   
@@ -288,9 +260,9 @@ useEffect(() => {
  
 
 //Fetech Path
-useEffect(() => {
-//  getUserPathAsync();
-}, []);
+// useEffect(() => {
+//   // getUserPathDirectly(current);
+// }, []);
 
 
  const delteUserPathAsync = async () => {
@@ -301,7 +273,7 @@ useEffect(() => {
     }
     
     const response = await axios.delete("/api/paths", {
-      data: { username: userData?.username },
+      data: { username: userData?.username }
     });
     console.log(userData);
           
@@ -377,11 +349,12 @@ const resetPath = () => {
         weight: 4
       }).addTo(mapRef.current);
 
-      // Add popup with polygon info
+      // Add popup with polygon info (use polygonName if available)
       const area = calculatePolygonArea(closedPolygonPoints);
+      const title = polygonName && polygonName.trim() !== '' ? polygonName : 'Polygon Created!';
       polygon.bindPopup(`
         <div>
-          <h3>Polygon Created!</h3>
+          <h3>${title}</h3>
           <p>Points: ${closedPolygonPoints.length}</p>
           <p>Area: ${area.toFixed(2)} m²</p>
           <p>Loop closed at point ${closureIndex}</p>
@@ -399,7 +372,7 @@ const resetPath = () => {
     }
     
     return polygon;
-  }, [userPath]);
+  }, [userPath, polygonName]);
 
 
   // 6. Calculate polygon area (moved outside detectLoops)
@@ -425,19 +398,23 @@ const resetPath = () => {
     console.error('Cannot save polygon: Invalid data');
     return;
   }
-   axios.post('/api/save-polygons',{
-    username:userData.username,
-    polygonName:"Test Land",
-    polygons:userPath
-  }).then(()=>{
-              console.log("Polygon gets saved to the Db");
- 
-              delteUserPathAsync();
- 
-}).catch(()=>{
-    console.log("Polygon is NOT SAVED");
+  // If polygonName is not set, show the form so user can enter one
+  if (!polygonName || polygonName.trim() === '') {
+    setShowNameForm(true);
+    console.warn('polygonName is empty — prompting user to enter a name before saving');
+    return;
+  }
 
-  })
+  axios.post('/api/save-polygons',{
+    username: userData.username,
+    polygonName: polygonName,
+    polygons: userPath
+  }).then(()=>{
+    console.log("Polygon gets saved to the Db");
+    delteUserPathAsync();
+  }).catch((err)=>{
+    console.log("Polygon is NOT SAVED", err);
+  });
    
   
   };
@@ -467,6 +444,7 @@ const resetPath = () => {
         </h4>
         
         <div style={infoStyle}>
+          <div><strong>UserName:</strong> {userData?.username}</div>
           <div><strong>Lat:</strong> {position.lat.toFixed(6)}</div>
           <div><strong>Lon:</strong> {position.lon.toFixed(6)}</div>
           <div><strong>Accuracy:</strong> {position.acc.toFixed(1)}m</div> 
@@ -538,7 +516,7 @@ const resetPath = () => {
 
           {isLoopClosed && (
             <button
-              onClick={createPolygonFromPath}
+              onClick={() => setShowNameForm(true)}
               style={{
                 ...buttonStyle,
                 backgroundColor: '#10b981',
@@ -561,6 +539,39 @@ const resetPath = () => {
             >
               Save Polygon To the Database
             </button>
+          )}
+
+          {/* Inline polygon name form */}
+          {showNameForm && (
+            <div style={{ marginTop: 8, padding: 8, background: '#fff', borderRadius: 6, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <label style={{ display: 'block', marginBottom: 6, fontSize: 13 }}>Polygon name</label>
+              <input
+                value={polygonName}
+                onChange={(e) => setPolygonName(e.target.value)}
+                placeholder="Enter polygon name"
+                style={{ width: '100%', padding: '8px', borderRadius: 4, border: '1px solid #d1d5db', marginBottom: 8 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => {
+                    // Save name and create polygon
+                    setShowNameForm(false);
+                    if (polygonName.trim() !== '') {
+                      createPolygonFromPath();
+                    }
+                  }}
+                  style={{ ...buttonStyle, backgroundColor: '#10b981' }}
+                >
+                  Create
+                </button>
+                <button
+                  onClick={() => setShowNameForm(false)}
+                  style={{ ...buttonStyle, backgroundColor: '#6b7280' }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
           )}
 
           

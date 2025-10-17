@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 
 export const detectClosedLoopsHandler = (req: Request, res: Response) => {
   const userpath = req.body.userpath;
-  console.log(userpath);
+  console.log("Servers side at loopdetection.ts ",userpath);
   
   if (!Array.isArray(userpath) || userpath.length < 2) {
     return res.status(400).json({ error: "Invalid userpath" });
@@ -13,7 +13,8 @@ export const detectClosedLoopsHandler = (req: Request, res: Response) => {
   const pythonProcess = spawn("python", ["./server/loop_detection.py"]);
 
   // Send userpath to the Python script via stdin
-  pythonProcess.stdin.write(JSON.stringify({ userpath }));
+  //That tolerance : 50.0 means if the start and end points are within 50 meters,
+  pythonProcess.stdin.write(JSON.stringify({ userpath , tolerance: 10000.0  }));
   pythonProcess.stdin.end();
 
   let result = "";

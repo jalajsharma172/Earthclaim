@@ -61,10 +61,9 @@ export default function Login() {
       
       await SuprabaseStorageService(username,email);
       await BrowserStorageService.saveUserToStorage({username:username,useremail:email});
-      console.log("handleFormLogin done");
-      
-    // window.location.reload();
-      
+      console.log("SuprabaseStorageService && saveUserToStorage Done");
+       
+      navigate('/');
     } catch (error) {
       console.log('Login Superbase is not working.');
       
