@@ -271,48 +271,48 @@ export default function Dashboard() {
   
   //Mint A NFT
   const mintNFT = async (nft: NFT) => {
-  if (connectionStatus !== "connected" || !userAddress || !signer) {
-    setError("Please connect your wallet first!");
-    return;
-  }
+      if (connectionStatus !== "connected" || !userAddress || !signer) {
+        setError("Please connect your wallet first!");
+        return;
+      }
 
-  setClaimingNFT(nft.area);
-  setError("");
-  setTransactionHash("");
+      setClaimingNFT(nft.area);
+      setError("");
+      setTransactionHash("");
 
-  try {
-    const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
+      try {
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
 
-    // Execute the mintNFT transaction  
-    const transaction = await contract.mintNFT(nft.tokenURI);
-    
-    setTransactionHash(transaction.hash);
-    
-    // Wait for transaction confirmation
-    const receipt = await transaction.wait();
-    
-    if (receipt.status === 1) {
-      // Transaction successful
-      alert(`Successfully minted NFT for ${nft.area}! Transaction: ${transaction.hash}`);
-      
-      // Update counte 
-    } else {
-      throw new Error("Transaction failed");
-    }
+        // Execute the mintNFT transaction  
+        const transaction = await contract.mintNFT(nft.tokenURI);
+        
+        setTransactionHash(transaction.hash);
+        
+        // Wait for transaction confirmation
+        const receipt = await transaction.wait();
+        
+        if (receipt.status === 1) {
+          // Transaction successful
+          alert(`Successfully minted NFT for ${nft.area}! Transaction: ${transaction.hash}`);
+          
+          // Update counte 
+        } else {
+          throw new Error("Transaction failed");
+        }
 
-  } catch (err: any) {
-    console.error("Error minting NFT:", err);
-    
-    if (err.code === "ACTION_REJECTED") {
-      setError("Transaction was rejected by user");
-    } else if (err.code === "INSUFFICIENT_FUNDS") {
-      setError("Insufficient funds for transaction");
-    } else {
-      setError(err.message || "Failed to mint NFT");
-    }
-  } finally {
-    setClaimingNFT(null);
-  }
+      } catch (err: any) {
+        console.error("Error minting NFT:", err);
+        
+        if (err.code === "ACTION_REJECTED") {
+          setError("Transaction was rejected by user");
+        } else if (err.code === "INSUFFICIENT_FUNDS") {
+          setError("Insufficient funds for transaction");
+        } else {
+          setError(err.message || "Failed to mint NFT");
+        }
+      } finally {
+        setClaimingNFT(null);
+      }
   };
 
  
@@ -750,7 +750,7 @@ export default function Dashboard() {
               ) : (
                 <>
                   {/* Control buttons */}
-                  <div className="flex items-center justify-between text-sm text-purple-700 mb-4">
+                  {/* <div className="flex items-center justify-between text-sm text-purple-700 mb-4">
                     <div>Username: <span className="font-mono font-bold">{currentUsername}</span></div>
                     <div className="flex gap-1">
                       <button
@@ -770,7 +770,7 @@ export default function Dashboard() {
                         🔄
                       </button>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                     {/* Render server-returned JSON (set via setNftData) */}
@@ -788,6 +788,12 @@ export default function Dashboard() {
                                 className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
                               >
                                 🗺️ View on Map
+                              </button>
+                                                            <button
+                                onClick={ ()=>{ mintNFTFromHash(item.IPFShashcode); } }
+                                className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
+                              >
+                                Mint NFT
                               </button>
                             </div>
                           ))}
