@@ -16,7 +16,9 @@ import {deletePolygon} from "@shared/delete_Polygon"
 import { detectClosedLoopsHandler } from "./loop_detection.ts";
 import {getPolygonJSON} from "@shared/Get_Polygons.ts"
 import { responseEncoding } from "axios";
- 
+import {TokenInfo} from "@shared/TokenInfo.ts" 
+
+
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -316,7 +318,42 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   try {
     const { recipient, tokenURI, tokenId } = req.body;
     console.log("Received token info:", { tokenId, tokenURI, recipient });
-    return res.status(200).json({ success: true });
+
+
+
+    const tokeninfo =await TokenInfo(recipient,tokenURI,tokenId);
+        if(tokeninfo.success==true){
+          return res.status(200).json({
+            success: true,
+            message: "TokenInfo Saved .",
+            recipient:recipient,
+            tokenURI:tokenURI,
+            tokenId:tokenId,
+            data:tokeninfo
+          });
+        }else{
+          
+          return res.status(200).json({
+            success: false,
+            message: "TokenInfo Not Saved .",
+            recipient:recipient,
+            tokenURI:tokenURI,
+            tokenId:tokenId,
+            data:tokeninfo
+          });
+        }
+
+
+
+
+
+
+
+
+
+
+
+     
   } catch (error) {
     console.error("Error in /api/tokeninfo:", error);
     return res.status(500).json({
