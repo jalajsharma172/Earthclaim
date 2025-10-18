@@ -262,8 +262,7 @@ app.post("/api/get-nfts", async (req, res) => {
       });
     }    
  
-  } catch (error) {
-    // console.error('Error in /api/get-nfts:', error);
+  } catch (error) { 
     res.status(500).json({ 
       success: false, 
       message: 'Internal server error',
@@ -309,6 +308,34 @@ app.post("/api/get-nfts", async (req, res) => {
        });
     }
   })
+
+
+
+
+app.post("/api/tokeninfo",async (res,req) => {
+  try {
+    const {recipient , tokenURI,tokenId} = req.body;
+    window.alert("Just Recieved REcipient , token URI, Token ID");
+    console.log(tokenId+" , "+tokenURI+" , "+recipient);
+    
+  } catch (error) {
+    
+  }
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   
 app.post('/api/detect-loops', (req, res) => {
     // Let detectClosedLoopsHandler handle sending the response

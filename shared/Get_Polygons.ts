@@ -25,9 +25,7 @@ export async function getPolygonJSON(username: string) {
 
     
   
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found" error
-      throw error;
-    }
+ 
     if (existingData) {  
       return { 
         success: true, 
