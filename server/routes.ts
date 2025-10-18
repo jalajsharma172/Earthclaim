@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { BrowserStorageService,SuprabaseStorageService} from "@shared/login";
 import { loginSchema ,userpathSchema} from "@shared/schema";
@@ -312,16 +312,19 @@ app.post("/api/get-nfts", async (req, res) => {
 
 
 
-app.post("/api/tokeninfo",async (res,req) => {
+app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   try {
-    const {recipient , tokenURI,tokenId} = req.body;
-    window.alert("Just Recieved REcipient , token URI, Token ID");
-    console.log(tokenId+" , "+tokenURI+" , "+recipient);
-    
+    const { recipient, tokenURI, tokenId } = req.body;
+    console.log("Received token info:", { tokenId, tokenURI, recipient });
+    return res.status(200).json({ success: true });
   } catch (error) {
-    
+    console.error("Error in /api/tokeninfo:", error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
-})
+});
 
 
 
