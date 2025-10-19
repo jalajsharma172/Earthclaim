@@ -333,7 +333,7 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
           });
         }else{
           
-          return res.status(200).json({
+          return res.status(500).json({
             success: false,
             message: "TokenInfo Not Saved .",
             recipient:recipient,
