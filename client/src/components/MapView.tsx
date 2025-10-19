@@ -291,8 +291,14 @@ useEffect(() => {
   // Loop detection
   const detectLoops = async () => {
     try {
+      // Client-side call remains the same
       const response = await axios.post("/api/detect-loops", {
-        'userpath': userPath,
+        userpath: userPath,
+        tolerance: 30.0,
+        config: {
+          minPoints: 15,
+          confidenceThreshold: 0.4
+        }
       });
       
       if (response.data.closed_loops === true) {

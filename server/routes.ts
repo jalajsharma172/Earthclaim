@@ -17,7 +17,7 @@ import { detectClosedLoopsHandler } from "./loop_detection.ts";
 import {getPolygonJSON} from "@shared/Get_Polygons.ts"
 import { responseEncoding } from "axios";
 import {TokenInfo} from "@shared/TokenInfo.ts" 
-
+import axios from "axios"; 
 
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -377,9 +377,11 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
 
 
   
-app.post('/api/detect-loops', (req, res) => {
+app.post('/api/detect-loops', async(req, res) => {
     // Let detectClosedLoopsHandler handle sending the response
     try {
+      
+      
       const detect= detectClosedLoopsHandler(req, res);
       console.log(detect);
        
