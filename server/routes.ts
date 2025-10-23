@@ -364,15 +364,56 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
 });
 
 
-// Adjust this new api to send Msg directly.
-app.post("api/send-msg",async (req:Request,res:Response) => {
-      const { recipient, tokenURI, tokenId } = req.body;
+app.post("/api/send-msg", async (req: Request, res: Response) => {
+  try {
+    const { recipient, tokenURI, tokenId } = req.body;
     console.log("Received token info:", { tokenId, tokenURI, recipient });
     const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${recipient}\nToken URI: ${tokenURI}`;
-    await sendTelegramMessage(text);
-})
+    console.log(text);
+    
+     let telegramResult: any = null;
+    try {
+      telegramResult = await sendTelegramMessage(text);
+      console.log("Telegram message sent:", telegramResult);
+    } catch (tgErr) {
+      console.error("Failed to send Telegram message:", tgErr);
+      // do not throw - continue to persist token info; include error in response
+    }
 
 
+    
+        if(telegramResult.success==true){
+          return res.status(200).json({
+            success: true,
+            message: "TokenInfo Saved .",
+            recipient:recipient,
+            tokenURI:tokenURI,
+            tokenId:tokenId,
+            data:telegramResult
+          });
+        }else{
+          
+          return res.status(500).json({
+            success: false,
+            message: "TokenInfo Not Saved .",
+            recipient:recipient,
+            tokenURI:tokenURI,
+            tokenId:tokenId,
+            data:telegramResult
+          });
+        }
+     
+  } catch (error) {
+    console.error("Error in /api/tokeninfo:", error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
+ 
+  
 
 
 

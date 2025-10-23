@@ -24,10 +24,10 @@ export async function sendTelegramMessage(
       { headers: { 'content-type': 'application/json' } }
     );
     
-    return data;
+    return {success:true,data};
   } catch (error) {
     // bubble up for caller to handle/log
-    throw error;
+     return {success:false,error};
   }
 }
 
