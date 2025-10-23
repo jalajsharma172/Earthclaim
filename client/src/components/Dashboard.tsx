@@ -14,8 +14,7 @@ const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS ;
 
 // Connection status types
 type ConnectionStatus = "disconnected" | "connecting" | "connected" | "error";
-
-// Interface for UserNFT data
+ 
 interface UserNFTData {
   id: string;
   username: string;
@@ -26,7 +25,7 @@ interface UserNFTData {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [userAddress, setUserAddress] = useState<string>("");
+  const [userAddress, setUserAddress] = useState<string>("");           // CURRETN ADDRESS
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const [error, setError] = useState<string>("");
   const [claimingNFT, setClaimingNFT] = useState<string | null>(null);
@@ -269,52 +268,7 @@ export default function Dashboard() {
       };
  
   
-  //Mint A NFT
-  const mintNFT = async (nft: NFT) => {
-      if (connectionStatus !== "connected" || !userAddress || !signer) {
-        setError("Please connect your wallet first!");
-        return;
-      }
-
-      setClaimingNFT(nft.area);
-      setError("");
-      setTransactionHash("");
-
-      try {
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
-
-        // Execute the mintNFT transaction  
-        const transaction = await contract.mintNFT(nft.tokenURI);
-        
-        setTransactionHash(transaction.hash);
-        
-        // Wait for transaction confirmation
-        const receipt = await transaction.wait();
-        
-        if (receipt.status === 1) {
-          // Transaction successful
-          alert(`Successfully minted NFT for ${nft.area}! Transaction: ${transaction.hash}`);
-          
-          // Update counte 
-        } else {
-          throw new Error("Transaction failed");
-        }
-
-      } catch (err: any) {
-        console.error("Error minting NFT:", err);
-        
-        if (err.code === "ACTION_REJECTED") {
-          setError("Transaction was rejected by user");
-        } else if (err.code === "INSUFFICIENT_FUNDS") {
-          setError("Insufficient funds for transaction");
-        } else {
-          setError(err.message || "Failed to mint NFT");
-        }
-      } finally {
-        setClaimingNFT(null);
-      }
-  };
-
+ 
  
   // Function to mint NFT from user's saved hash
   const mintNFTFromHash = async (nft: UserNFTData) => {
@@ -789,7 +743,7 @@ export default function Dashboard() {
                               >
                                 🗺️ View on Map
                               </button>
-                                                            <button
+                                <button
                                 onClick={ ()=>{ mintNFTFromHash(item.IPFShashcode); } }
                                 className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
                               >

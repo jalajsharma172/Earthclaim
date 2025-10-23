@@ -18,6 +18,7 @@ import {getPolygonJSON} from "@shared/Get_Polygons.ts"
 import { responseEncoding } from "axios";
 import {TokenInfo} from "@shared/TokenInfo.ts" 
 import axios from "axios"; 
+import sendTelegramMessage from "./Social_Media_Updates/TelegramMsgUpdate.ts";
 
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -318,7 +319,17 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   try {
     const { recipient, tokenURI, tokenId } = req.body;
     console.log("Received token info:", { tokenId, tokenURI, recipient });
-
+    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${recipient}\nToken URI: ${tokenURI}`;
+    console.log(text);
+    
+     let telegramResult: any = null;
+    try {
+      telegramResult = await sendTelegramMessage(text);
+      console.log("Telegram message sent:", telegramResult);
+    } catch (tgErr) {
+      console.error("Failed to send Telegram message:", tgErr);
+      // do not throw - continue to persist token info; include error in response
+    }
 
 
     const tokeninfo =await TokenInfo(recipient,tokenURI,tokenId);
@@ -342,17 +353,6 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
             data:tokeninfo
           });
         }
-
-
-
-
-
-
-
-
-
-
-
      
   } catch (error) {
     console.error("Error in /api/tokeninfo:", error);
@@ -363,6 +363,14 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   }
 });
 
+
+// Adjust this new api to send Msg directly.
+app.post("api/send-msg",async (req:Request,res:Response) => {
+      const { recipient, tokenURI, tokenId } = req.body;
+    console.log("Received token info:", { tokenId, tokenURI, recipient });
+    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${recipient}\nToken URI: ${tokenURI}`;
+    await sendTelegramMessage(text);
+})
 
 
 
