@@ -19,9 +19,11 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
- 
+interface LoginProps {
+  onLoginSuccess?: (userData: UserData) => void;
+}
 
-export default function Login() {
+export default function Login({ onLoginSuccess }: LoginProps) {
   const [isLoading, setIsLoading] = useState(false);
  const navigate = useNavigate(); 
 
@@ -42,6 +44,7 @@ export default function Login() {
       const storedUser = await  BrowserStorageService.getUserFromStorage();
       if (storedUser) {
         console.log( 'Check for existing user '+ storedUser);
+        navigate('/');
       } 
     };
     checkStoredUser();
@@ -60,10 +63,15 @@ export default function Login() {
 
       
       await SuprabaseStorageService(username,email);
-      await BrowserStorageService.saveUserToStorage({username:username,useremail:email});
+      const userData = {username:username, useremail:email};
+      await BrowserStorageService.saveUserToStorage(userData);
       console.log("SuprabaseStorageService && saveUserToStorage Done");
-       
-      navigate('/');
+      
+      // Call onLoginSuccess callback if provided
+      if (onLoginSuccess) {
+        onLoginSuccess(userData);
+      }
+      
     } catch (error) {
       console.log('Login Superbase is not working.');
       

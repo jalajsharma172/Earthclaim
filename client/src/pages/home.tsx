@@ -1,29 +1,57 @@
-import { useState } from "react";
+import { useState ,useEffect} from "react";
 import { useNavigate } from "react-router-dom"; // Add this import
-import MapView from "@/components/MapViewdetection";
-// import type { User } from "@shared/schema";
-// import useLocationTracker from "@/hooks/useLocationTracker";
+import Login from "@/pages/login"; 
 import {BrowserStorageService} from '@shared/login'
  interface UserData {
   username: string
-  useremail: string 
+  useremail: string
 }
 
-
 export default function Home() {
-  const [showMap, setShowMap] = useState(false);
-  const navigate = useNavigate(); // Add this line
+  const navigate = useNavigate();
+  const [user, setUser] = useState<UserData | null>(null);
+  const [homepage, setHomepage] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const storedUser = await BrowserStorageService.getUserFromStorage();
+        if (storedUser != null) {
+          setUser(storedUser);
+          setHomepage(true);
+        }
+      } catch (error) {
+        console.error("Error loading user:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadUser();
+  }, []);
+
+  // Add listener for login success
+  const handleLoginSuccess = (userData: UserData) => {
+    setUser(userData);
+    setHomepage(true);
+  };
 
 
- 
- 
+if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
-
-
-
-
-
+  if (!homepage || !user) {
+    return <Login onLoginSuccess={handleLoginSuccess} />;
+  }
+  
   return (
+    
     <div className="h-screen w-screen bg-gradient-to-br from-blue-100 to-green-100 overflow-auto">
       {/* Navbar */}
       <nav className="flex justify-between items-center px-8 py-4 bg-white shadow-md">
@@ -56,15 +84,18 @@ export default function Home() {
             } else {
                 console.log('This browser does not support notifications');
             }
+
             }}
           >
             Connect Wallet
           </button>
           <button
             className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition"
-            onClick={()=>{
-              //delete local storage
-              BrowserStorageService.clearUserFromStorage();
+            onClick={async ()=>{
+              // delete local storage and update UI immediately
+              await BrowserStorageService.clearUserFromStorage();
+              setUser(null);
+              navigate('/'); // or '/login'
             }}
           >
             Logout
@@ -78,7 +109,7 @@ export default function Home() {
           Welcome to Territory Walker!
         </h1>
         <p className="text-lg text-gray-700 mb-6">
-          https://app.emergent.sh/
+          https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/ https://app.emergent.sh/
           
           Territory Walker is a geospatial tracking app where you can log your
           walks, claim areas, and compete for achievements. Track your paths,
@@ -96,20 +127,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* MapView Section */}
-      {/* {showMap && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-60 flex items-center justify-center">
-          <div className="relative w-[90vw] h-[80vh] bg-white rounded-lg shadow-2xl overflow-hidden">
-            <button
-              className="absolute top-4 right-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-              onClick={() => setShowMap(false)}
-            >
-              Close Map
-            </button>
-            <MapView />
-          </div>
-        </div>
-      )} */}
+    
     </div>
   );
 }
+
+
+
+
+ 
