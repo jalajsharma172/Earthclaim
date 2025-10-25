@@ -586,6 +586,9 @@ const resetPath = () => {
               ...buttonStyle,
               backgroundColor: '#4f46e5'
             }}
+            onClick={()=>
+              navigate('/dashboard')
+            }
           >
              Show My NFTs
           </button>

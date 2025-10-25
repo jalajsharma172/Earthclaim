@@ -30,7 +30,8 @@ export async function getPolygonJSON(username: string) {
       return { 
         success: true, 
         message: 'Got polygons from Db', 
-        JSON: existingData.Polygon  // Access the Polygon property
+        data: existingData  // Access the Polygon property
+
       };       
     } else {      
       return { 

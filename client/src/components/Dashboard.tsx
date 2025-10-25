@@ -5,11 +5,9 @@ import CLAIM_EARTH_NFT_ABI from "./abi.json"; // Import the ABI from a separate 
 import {BrowserStorageService} from "@shared/login";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-interface NFT {
-  area: string;
-  hash: string;
-  tokenURI: string;
-}
+import {TokenInfoViewer} from "./TokenInfoViewer.tsx";
+
+
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS ;
 
 // Connection status types
@@ -27,13 +25,11 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [userAddress, setUserAddress] = useState<string>("");           // CURRETN ADDRESS
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
-  const [error, setError] = useState<string>("");
-  const [claimingNFT, setClaimingNFT] = useState<string | null>(null);
+  const [error, setError] = useState<string>(""); 
   const [transactionHash, setTransactionHash] = useState<string>("");
   const [tokenCounter, setTokenCounter] = useState<number>(0);
   const [userNFTCount, setUserNFTCount] = useState<number>(0);
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.Signer | null>(null);
+
   
   // New state for user's NFT data
   const [userNFTData, setUserNFTData] = useState<UserNFTData[]>([]);
@@ -41,66 +37,18 @@ export default function Dashboard() {
   const [currentUsername, setCurrentUsername] = useState<string>("");
 
   // NFT storage
-   const [nftData, setNftData] = useState(null);
-  const [loading, setLoading] = useState(false); 
-  const [username, setUsername] = useState('');
- 
+   const [nftData, setNftData] = useState<any[] | null>(null);
+  const [loading, setLoading] = useState(false);  
+  // web3 ITEM 
+  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [signer, setSigner] = useState<ethers.Signer | null>(null);
 
+  // Add minting state tracking
+  const [mintingNFTs, setMintingNFTs] = useState<Set<string>>(new Set());
+  const [isAnyMinting, setIsAnyMinting] = useState(false);
 
-  
- // SEt --setProvider    ,     setSigner      ,      setCurrentUsername    | | fetchAndSaveNFTs
-  const handleSuccessfulConnection = async (address: string) => {
-    try {
-      setUserAddress(address);// Form
-      setConnectionStatus("connected");
-      setError("");
-      
-      // Initialize provider and signer
-      const newProvider = new ethers.BrowserProvider(window.ethereum);
-      const newSigner = await newProvider.getSigner();
-      
-      setProvider(newProvider);
-      setSigner(newSigner);
-      
-      const userData = await BrowserStorageService.getUserFromStorage();
-      console.log("User data from storage:", userData);
-      
-      // Handle both structures: { userData: {...} } or direct {...}
-      const actualUserData = userData?.userData ? userData.userData : userData;
-      const username = actualUserData?.username ?? "";
-      console.log("Extracted username:", username);
-      console.log("Username length:", username.length);
-      setCurrentUsername(username);
-      
-      if (username && username.trim() !== "") {
-        fetchAndSaveNFTs(username);
-      } else {
-        console.log("No valid username found, skipping NFT fetch");
-        setError("Please login first to fetch your NFTs");
-      }
-    } catch (err) {
-      console.error("Error in successful connection:", err);
-      setConnectionStatus("error");
-      setError("Failed to complete wallet connection");
-    }
-  };
-
- 
-// reset
-  const resetConnection = () => {
-    setUserAddress("");
-    setProvider(null);
-    setSigner(null);
-    setTokenCounter(0);
-    setUserNFTCount(0);
-    setTransactionHash("");
-    setError("");
-    setUserNFTData([]);
-    setCurrentUsername("");
-    setLoadingNFTData(false);
-  };
-
-  // Connect button >eth_requestAccounts -> calling handleSuccessfulConnection() for popup accuount selection
+// 1. Wallet Connection Functions
+    // Address - >  handleSuccessfulConnection();
   const connectWallet = async () => {
     if (typeof window.ethereum === "undefined") {
       setConnectionStatus("error");
@@ -130,7 +78,7 @@ export default function Dashboard() {
       }
     }
   };
-  // 4 Methods to disconnect wallet at any cost 
+  
   const disconnectWallet = async () => {
     try {
       // Method 1: Try to use MetaMask's disconnect method (if available)
@@ -191,6 +139,189 @@ export default function Dashboard() {
       setError("Disconnected from application (MetaMask connection maintained)");
     }
   };
+
+//  This function sets up the Web3 provider and signer:
+ // SEt --setProvider    ,     setSigner      ,      setCurrentUsername    | | fetchAndSaveNFTs
+  const handleSuccessfulConnection = async (address: string) => {
+    try {
+      setUserAddress(address);// Form
+      setConnectionStatus("connected");
+      setError("");
+      
+      // Initialize provider and signer
+      const newProvider = new ethers.BrowserProvider(window.ethereum);
+      const newSigner = await newProvider.getSigner();
+      
+
+      setProvider(newProvider);
+      setSigner(newSigner);
+      
+      const userData = await BrowserStorageService.getUserFromStorage();
+      console.log("User data from storage:", userData);
+      
+      // Handle both structures: { userData: {...} } or direct {...}
+      const actualUserData = userData?.userData ? userData.userData : userData;
+      const username = actualUserData?.username ?? "";
+      console.log("Extracted username:", username);
+      console.log("Username length:", username.length);
+      setCurrentUsername(username);
+      
+      if (username && username.trim() !== "") {
+        fetechNFTs(username);
+      } else {
+        console.log("No valid username found, skipping NFT fetch");
+        setError("Please login first to fetch your NFTs");
+      }
+    } catch (err) {
+      console.error("Error in successful connection:", err);
+      setConnectionStatus("error");
+      setError("Failed to complete wallet connection");
+    }
+  };
+
+//2. NFT Minting Function - Core Web3 Interaction
+//This is your main Web3 contract interaction:
+  const mintNFTFromHash = async (nft: any) => {
+    if (connectionStatus !== "connected" || !userAddress || !signer) {
+      setError("Please connect your wallet first!");
+      return;
+    }
+
+    // Global minting check
+    if (isAnyMinting) {
+      setError("Please wait for the current minting process to complete");
+      return;
+    }
+
+    // Individual NFT minting check
+    if (mintingNFTs.has(nft.IPFShashcode)) {
+      setError("Minting already in progress for this NFT");
+      return;
+    }
+
+    setIsAnyMinting(true);
+    setMintingNFTs(prev => new Set(prev).add(nft.IPFShashcode));
+    setError("");
+    setTransactionHash("");
+
+    try {
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
+ 
+      // Create tokenURI from the saved hash
+      const tokenURI = `${nft.IPFShashcode}`;
+      
+      // Execute the mintNFT transaction  
+      const transaction = await contract.mintNFT(tokenURI);
+      
+      setTransactionHash(transaction.hash);
+      
+      // Wait for transaction confirmation
+      const receipt = await transaction.wait();
+      
+      if (receipt.status === 1) { 
+        alert(`Successfully minted NFT from your saved hash! Transaction: ${transaction.hash}`);
+     
+        // Update local state to reflect minted status and then save the updated NFT to DB
+const updatedData = nftData?.map(item =>
+  item.IPFShashcode === nft.IPFShashcode
+    ? { ...item, minted: true, transactionHash: transaction.hash }
+    : item
+) || null;
+
+setNftData(updatedData);
+console.log(updatedData);
+
+// DB Preparation
+try {
+  const requestData = { 
+    username: currentUsername, 
+    nft: updatedData
+  };    
+  
+  console.log("Saving NFT to DB:", requestData);
+      
+  const update = await axios.post("/api/update-polygon-minted", requestData);
+  console.log("API Response:", update);
+  
+  if (!update.data.success) {
+    throw new Error(`API Error: ${update.data.message || "Unknown error"}`);
+  }
+  console.log("✅ NFT status updated successfully in database");
+} catch (err) {
+  console.error("❌ Error saving NFT to database:", err);
+  // Consider showing an error message to the user here
+}
+       
+        
+
+      } else {
+        throw new Error("Transaction failed");
+      }
+
+    } catch (err: any) {
+      console.error("Error minting NFT from hash:", err);
+      
+      if (err.code === "ACTION_REJECTED") {
+        setError("Transaction was rejected by user");
+      } else if (err.code === "INSUFFICIENT_FUNDS") {
+        setError("Insufficient funds for transaction");
+      } else {
+        setError(err.message || "Failed to mint NFT from hash");
+      }
+    } finally {
+      setIsAnyMinting(false);
+      setMintingNFTs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(nft.IPFShashcode);
+        return newSet;
+      });
+    }
+  };
+
+
+
+ 
+
+
+
+const saveNFTToDb = async (username: string, nft: any) => {
+
+}
+
+  
+  // Helper function to check if an NFT is currently minting
+  const isMinting = (ipfsHash: string): boolean => {
+    return mintingNFTs.has(ipfsHash);
+  };
+
+
+
+
+
+
+
+
+
+
+/**Not Importance */
+ 
+// reset
+  const resetConnection = () => {
+    setUserAddress("");
+    setProvider(null);
+    setSigner(null);
+    setTokenCounter(0);
+    setUserNFTCount(0);
+    setTransactionHash("");
+    setError("");
+    setUserNFTData([]);
+    setCurrentUsername("");
+    setLoadingNFTData(false);
+    setMintingNFTs(new Set());
+    setIsAnyMinting(false);
+  };
+
+
   // Hiding Walllet Address
   const formatAddress = (address: string): string => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
@@ -221,37 +352,24 @@ export default function Dashboard() {
   };
  
 
-    const fetchAndSaveNFTs = async (username:string) => {
-      console.log("=== fetchAndSaveNFTs called ===");
-      console.log("Username parameter:", username);
-      console.log("Username type:", typeof username);
-      console.log("Username truthy check:", !!username);
-    
-      
+    const fetechNFTs = async (username:string) => {      
         setLoading(true); 
         
         try {
-          const requestData = { username: username };
-          console.log("Sending request data:", requestData);
-          console.log("Request URL:", '/api/get-nfts');
-          console.log("Axios config:", {
-            method: 'POST',
-            url: '/api/get-nfts',
-            data: requestData
-          });
-          
-          const response = await axios.post('/api/get-nfts', requestData);
+          const requestData = { username: username };         
+          const nfts = await axios.post('/api/get-nfts', requestData);
           
           
-          if (response.data.success && response.data.status) {
-            console.log('NFT data received:', response.data.JSON);
+          if ( nfts.data.success) {
+            console.log('NFT data received:', nfts.data.data.data.Polygon);
             
-            setNftData(response.data.JSON); // Save JSON to state
-            setError(''); // Clear any previous errors
-            
-            console.log('NFT data saved successfully');
+
+            setNftData(nfts.data.data.data.Polygon);
+
+            setError(''); // Clear any previous er  rors
+            console.log('NFT data recieved successfully');
           } else {
-            const errorMessage = response.data.message || 'Failed to fetch NFT data';
+            const errorMessage = nfts.data.message || 'Failed to fetch NFT data';
             setError(errorMessage);
             setNftData(null);
             console.error('API Error:', errorMessage);
@@ -266,75 +384,13 @@ export default function Dashboard() {
                 console.log(nftData);
 
       };
- 
-  
- 
- 
-  // Function to mint NFT from user's saved hash
-  const mintNFTFromHash = async (nft: UserNFTData) => {
-    if (connectionStatus !== "connected" || !userAddress || !signer) {
-      setError("Please connect your wallet first!");
-      return;
-    }
-
-    setClaimingNFT(nft.id);
-    setError("");
-    setTransactionHash("");
-
-    try {
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
-
-      // Create tokenURI from the saved hash
-      const tokenURI = `https://fuchsia-secondary-grasshopper-71.mypinata.cloud/ipfs/${nft.hashjson}`;
-      
-      // Execute the mintNFT transaction  
-      const transaction = await contract.mintNFT(tokenURI);
-      
-      setTransactionHash(transaction.hash);
-      
-      // Wait for transaction confirmation
-      const receipt = await transaction.wait();
-      
-      if (receipt.status === 1) {
-        // Transaction successful
-        alert(`Successfully minted NFT from your saved hash! Transaction: ${transaction.hash}`);
-        
-        // Update the NFT as minted in database
-        try {
-          // await userNFTAPI.updateUserNFTMintedStatus(nft.id, true);
-          console.log("Updated NFT minted status in database");
-        } catch (updateErr) {
-          console.error("Failed to update minted status:", updateErr);
-        }
-         
-        
-      } else {
-        throw new Error("Transaction failed");
-      }
-
-    } catch (err: any) {
-      console.error("Error minting NFT from hash:", err);
-      
-      if (err.code === "ACTION_REJECTED") {
-        setError("Transaction was rejected by user");
-      } else if (err.code === "INSUFFICIENT_FUNDS") {
-        setError("Insufficient funds for transaction");
-      } else {
-        setError(err.message || "Failed to mint NFT from hash");
-      }
-    } finally {
-      setClaimingNFT(null);
-    }
-  } ;
-
-  
   const isUserLoggedIn = (): boolean => { 
     return currentUsername !== "Anonymous" && currentUsername.trim() !== "";
   };
 
 
 
-
+/**Not Importance */
 
   
 
@@ -412,27 +468,9 @@ export default function Dashboard() {
       )}
       </div> 
       
-      {connectionStatus === "connected" && (currentUsername === "Anonymous" || !currentUsername) && (
-        <div className="mt-4 inline-block">
-          <div className="px-6 py-3 bg-gradient-to-r from-orange-100 to-red-100 rounded-full border border-orange-200">
-            <p className="text-orange-800 font-semibold">
-              Please <a href="/" className="underline text-red-700 hover:text-red-900">login or register</a> to see your NFTs
-            </p>
-          </div>
-        </div>
-      )}
     </div>
 
-          {/* Welcome Message with Username */}
-          {connectionStatus === "connected" && currentUsername && currentUsername !== "Anonymous" && (
-            <div className="mt-4 inline-block">
-              <div className="px-6 py-3 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full border border-indigo-200">
-                <p className="text-indigo-800 font-semibold">
-                  Welcome back, <span className="font-mono font-bold text-purple-700">{currentUsername}</span>! 👋
-                </p>
-              </div>
-            </div>
-          )}
+          
           
           {/* Login Prompt if no username */}
           {connectionStatus === "connected" && (currentUsername === "Anonymous" || !currentUsername) && (
@@ -676,7 +714,7 @@ export default function Dashboard() {
 
                 {connectionStatus === "connected" && isUserLoggedIn() && (
                   <div className="bg-white rounded-xl p-4 shadow-md">
-                    <div className="text-sm text-gray-700 mb-2">Username1:</div>
+                    <div className="text-sm text-gray-700 mb-2">Username :</div>
                     <div className="font-mono font-bold text-indigo-600">{currentUsername}</div>
                   </div>
                 )}
@@ -703,124 +741,77 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <>
-                  {/* Control buttons */}
-                  {/* <div className="flex items-center justify-between text-sm text-purple-700 mb-4">
-                    <div>Username: <span className="font-mono font-bold">{currentUsername}</span></div>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => saveNFTHash(currentUsername, `test_hash_${Date.now()}`)}
-                        disabled={loadingNFTData}
-                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors disabled:opacity-50"
-                        title="Add test NFT"
-                      >
-                        ➕ Test
-                      </button>
-                      <button
-                        onClick={() => fetchUserNFTData(currentUsername)}
-                        disabled={loadingNFTData}
-                        className="px-2 py-1 bg-purple-500 hover:bg-purple-600 text-white text-xs rounded transition-colors disabled:opacity-50"
-                        title="Refresh NFT data"
-                      >
-                        🔄
-                      </button>
-                    </div>
-                  </div> */}
-
                   <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                     {/* Render server-returned JSON (set via setNftData) */}
                     {nftData && Array.isArray(nftData) && (
                       <div className="mb-4 bg-white rounded-xl p-4 shadow-md">
                         <h3 className="text-lg font-bold text-gray-800 mb-2">Server NFTs</h3>
                         <div className="space-y-2">
-                          {nftData.map((item: any, idx: number) => (
-                            <div key={idx} className="p-3 border rounded-lg">
-                              <div className="font-semibold text-gray-800">{item.Name || 'Unnamed'}</div>
-                              <div className="text-sm text-gray-600">Area: {typeof item.Area === 'number' ? item.Area.toLocaleString() : item.Area}</div>
-                              <div className="text-sm text-indigo-600 break-all">IPFS: <a href={`https://ipfs.io/ipfs/${item.IPFShashcode}`} target="_blank" rel="noreferrer" className="underline">{item.IPFShashcode}</a></div>
-                              <button
-                                onClick={() => navigate('/view-polygon', { state: { ipfsHash: item.IPFShashcode }})}
-                                className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
-                              >
-                                🗺️ View on Map
-                              </button>
+                          {nftData.map((item: any, idx: number) => {
+                            const isCurrentlyMinting = isMinting(item.IPFShashcode);
+                            
+                            return (
+                              <div key={idx} className="p-3 border rounded-lg">
+                                <div className="font-semibold text-gray-800">{item.Name || 'Unnamed'}</div>
+                                <div className="text-sm text-gray-600">Area: {typeof item.Area === 'number' ? item.Area.toLocaleString() : item.Area}</div>
+                                <div className="text-sm text-indigo-600 break-all">IPFS: <a href={`https://ipfs.io/ipfs/${item.IPFShashcode}`} target="_blank" rel="noreferrer" className="underline">{item.IPFShashcode}</a></div>
+
                                 <button
-                                onClick={ ()=>{ mintNFTFromHash(item.IPFShashcode); } }
-                                className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
-                              >
-                                Mint NFT
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {loadingNFTData ? (
-                      <div className="text-center py-8">
-                        <div className="w-8 h-8 border-4 border-purple-300 border-t-purple-600 rounded-full animate-spin mx-auto"></div>
-                        <p className="text-purple-600 mt-2">Loading your NFTs...</p>
-                      </div>
-                    ) : userNFTData.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-purple-600 mb-2">No NFTs available</p>
-                        <p className="text-sm text-purple-500">Create polygons in MapView to generate NFTs!</p>
-                      </div>
-                    ) : (
-                      userNFTData.map((nft, idx) => (
-                        <div 
-                          key={nft.id} 
-                          className="bg-white rounded-2xl shadow-lg p-4 hover:shadow-xl transition-all duration-200 border border-purple-100"
-                        >
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <div className="font-semibold text-gray-800">Land NFT #{idx + 1}</div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                                  nft.minted === 1 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {nft.minted === 1 ? 'Minted' : 'Pending'}
-                                </span>
-                              </div>
-                              <div className="text-xs text-gray-500 font-mono mt-1 break-all">
-                                Hash: {nft.hashjson.length > 20 ? `${nft.hashjson.substring(0, 20)}...` : nft.hashjson}
-                              </div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                Created: {new Date(nft.createdAt).toLocaleDateString()}
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                              {/* Always show mint button - removed conditional rendering */}
-                              <button 
-                                onClick={() => mintNFTFromHash(nft)}
-                                disabled={connectionStatus !== "connected" || claimingNFT === nft.id}
-                                className={`px-4 py-2 rounded-xl font-bold text-white shadow-lg transition-all duration-200 min-w-20 ${
-                                  connectionStatus === "connected" && claimingNFT !== nft.id
-                                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 transform hover:scale-105' 
-                                    : 'bg-gray-400 cursor-not-allowed'
-                                }`}
-                              >
-                                {claimingNFT === nft.id ? (
-                                  <div className="flex items-center gap-1">
-                                    <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                  </div>
-                                ) : connectionStatus === "connected" ? (
-                                  'Mint'
-                                ) : (
-                                  'Connect'
+                                  onClick={() => navigate('/view-polygon', { state: { ipfsHash: item.IPFShashcode }})}
+                                  className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm w-full"
+                                >
+                                  🗺️ View on Map
+                                </button>
+                                
+                                {item.minted === false && (
+                                  <button 
+                                    onClick={() =>{
+                                       mintNFTFromHash(item)
+                                    }}
+                                    disabled={isCurrentlyMinting}
+                                    className={`mt-2 px-4 py-2 rounded-lg transition-colors text-sm w-full ${
+                                      isCurrentlyMinting 
+                                        ? 'bg-gray-400 cursor-not-allowed text-gray-200' 
+                                        : 'bg-green-500 hover:bg-green-600 text-white'
+                                    }`}
+                                  >
+                                    {isCurrentlyMinting ? (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        Minting...
+                                      </div>
+                                    ) : (
+                                      'Mint NFT'
+                                    )}
+                                  </button> 
                                 )}
-                              </button>
-                              <button
-                                onClick={() => navigator.clipboard.writeText(nft.hashjson)}
-                                className="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white text-xs rounded transition-colors"
-                                title="Copy hash code"
-                              >
-                                📋 Copy
-                              </button>
-                            </div>
-                          </div>
+                                
+                                {item.minted === true && (
+                                  <button
+                                    onClick={() => {
+                                      // Pass all needed data via router state
+                                      navigate(`/token-info/${item.IPFShashcode}`, {
+                                        state: {
+                                          tokenName: item.Name || 'Unnamed Token',
+                                          ipfsHash: item.IPFShashcode,
+                                          signer: signer,
+                                          transactionHash: item.transactionHash,
+                                          area: item.Area,
+                                          minted: item.minted,
+                                          username: currentUsername
+                                        }
+                                      });
+                                    }}
+                                    className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm w-full"
+                                  >
+                                    🔍 View Token Info
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
-                      ))
+                      </div>
                     )}
                   </div>
                 </>
@@ -852,7 +843,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-
-
- 

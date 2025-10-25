@@ -19,6 +19,7 @@ import { responseEncoding } from "axios";
 import {TokenInfo} from "@shared/TokenInfo.ts" 
 import axios from "axios"; 
 import sendTelegramMessage from "./Social_Media_Updates/TelegramMsgUpdate.ts";
+import {UpdateMintedPolygon} from "@shared/UpdateMintedPolygon";
 
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -96,12 +97,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-      const success=clearUserPath(username)
-   
-      res.status(200).json({
-        // success: success,
+      const path= await clearUserPath(username)
+      if(path.success==true){
+        res.status(200).json({
         message: 'Paths deleted successfully',
       });
+      }else{
+        res.status(500).json({
+        message: 'Path is Not Deleted Successfully'
+      });
+      }
+      
 
     } catch (error) {
       console.error('Error deleting paths:', error);
@@ -135,127 +141,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
 // POST API to save polygons to UserPolygon table
 
   // Additional API to get all paths (optional)
-  app.post("/api/save-polygons", async (req, res) => {
-    try {
-      const {username,polygonName,polygons } = req.body;
+app.post("/api/save-polygons", async (req, res) => {
+  try {
+    const { username, polygonName, polygons } = req.body;
 
-      if(!username || !polygonName || !polygon){
-        return res.status(404).json({
-          mmessage: "Unable to get info from api "
-        })
-      }
+    // Fixed variable name - changed 'polygon' to 'polygons'
+    if (!username || !polygonName || !polygons) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: username, polygonName, or polygons"
+      });
+    }
 
-      console.log("Servser side Name   ::  ",username);
-      
- //HNADLE ipfs ERROR HADLIng
-      
-      const IPFS=await uploadJsonToIPFS(polygons);
-      console.log("IPFS  : ",IPFS);
-      if(IPFS=="Error"){
-         return res.status(401).json({
-          success: false,
-          message: "IPFS is not working"
-        });
-      }
-      // Convert from [{lat, lon}, ...] → [ [lon, lat], ... ]
-    const coords = polygons.map(p => [p.lon, p.lat]);
-        // Close polygon loop (important for Turf)
+    console.log("Server side Name :: ", username);
+
+    // Handle IPFS error handling
+    const IPFS = await uploadJsonToIPFS(polygons);
+    console.log("IPFS : ", IPFS);
+    
+    if (IPFS === "Error") {
+      return res.status(500).json({
+        success: false,
+        message: "IPFS upload failed"
+      });
+    }
+
+    // Convert from [{lat, lng}, ...] → [ [lng, lat], ... ]
+    // Fixed: using 'lng' instead of 'lon'
+    const coords = polygons.map(p => [p.lng, p.lat]);
+    
+    // Close polygon loop (important for Turf)
     if (coords.length > 0 && 
         (coords[0][0] !== coords[coords.length - 1][0] || 
          coords[0][1] !== coords[coords.length - 1][1])) {
       coords.push(coords[0]);
     }
+    
     // Compute area using Turf (in square meters)
     const turfPolygon = polygon([coords]);
     const areaInSqMeters = area(turfPolygon);
        
     console.log("Polygon Area (m²):", areaInSqMeters);
-
+    console.log(username, polygonName, areaInSqMeters, IPFS);
     
-    // const saveToDb
-    console.log(username,polygonName,areaInSqMeters,IPFS);
+    // Save to database
+    const polygonstatus = await savePolygon(username, polygonName, areaInSqMeters, IPFS);
     
-    const polygonstatus=await savePolygon(username,polygonName,areaInSqMeters,IPFS)
-    if(polygonstatus.success==true){
-      
-      
-      // Clear UserPath Db.
-       
-      
-      
-      
+    if (polygonstatus.success === true) {      
       return res.status(200).json({
         success: true,
-        message: "Polygon Saved Db successfully",
+        message: "Polygon saved to database successfully",
         totalArea_m2: areaInSqMeters,
-        IPFS,
+        IPFS: IPFS,
       });
-
-
-
-
-
-
-   }else{
-   
-      return res.status(200).json({
+    } else {
+      console.error("Can't save polygon to db:", polygonstatus.error);
+      return res.status(500).json({
         success: false,
-        message: await polygonstatus.message,
-        totalArea_m2: areaInSqMeters,
-        IPFS,
+        message: polygonstatus.message || "Failed to save polygon to database",
+        error: polygonstatus.error
       });
     }
+
+  } catch (error) {
+    console.error("Error in /api/save-polygons:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+});
+
+
+
+// minted ==true; and set transaction hash
+app.post("/api/update-polygon-minted", async (req, res) => {
+  const { username, nft } = req.body;
+  console.log("API : /api/update-polygon-minted");
+  console.log(username);
+  console.log(nft);
+  
+  if (!username || !nft ) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing required fields: username, nft, or transactionHash"
+    });
+  }
+  try {
+    console.log("Server On Updateminted polygon");
     
-      
-    } catch (error) {
-      console.error('Error fetching paths:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error at server side api',
-        polygon:[]
+   const polygonstatus=await UpdateMintedPolygon(username, nft);
+   console.log(polygonstatus);
+   
+   if(polygonstatus.success==true){
+      return res.status(200).json({
+        success: true,
+        message: "Polygon minted status updatedsuccessfully"
       });
-    }
-  });
+   }else{
+      return res.status(400).json({
+        success: false,
+        message: "Polygon is not pdatedsuccessfully"
+      });
+   }
 
+  } catch (err) {
+      return res.status(401).json({
+        success: false,
+        message: "Polygon minted status not updatedsuccessfully"
+      });
+  }
+
+
+  
+
+});
 
 
 app.post("/api/get-nfts", async (req, res) => {
-  try {
-    console.log("=== /api/get-nfts endpoint called ===");
-    console.log("Request method:", req.method);
-    console.log("Request headers:", req.headers);
-    console.log("Request body:", req.body);
-    console.log("Request body type:", typeof req.body);
-    console.log("Request body keys:", Object.keys(req.body || {}));
-    
-    const { username } = req.body;
-    console.log("Extracted username:", username);
-    console.log("Username type:", typeof username);
-    console.log("Username truthy check:", !!username);
+  try {    
+    const { username } = req.body; 
     
     if(!username){
       console.log("Username is missing or empty - returning 400");
       return res.status(400).json({
         success: false, 
-        message:'No UserName found at API'
+        message:'No UserName found at API Body'
       });
     }
     // Get JSON From 'UserPolygon' Table - AWAIT the promise
-    const result = await getPolygonJSON(username);
-
- 
- 
-    // For clarity, extract the properties if present
-    const nftJson = result.JSON || null;
-    const msg = result.message || 'No data available';
-
-    console.log('NFT JSON data:', nftJson);
+    const data = await getPolygonJSON(username);
     
-    if(nftJson){
+    if(data){
       res.status(200).json({
         success: true,
         status: true,
-        JSON: nftJson
+        data: data
       });
     }else{
       res.status(404).json({
