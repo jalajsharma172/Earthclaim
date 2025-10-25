@@ -1,42 +1,16 @@
 import React, { useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
 
 export const TokenInfoViewer: React.FC = () => {
   const [approveStatus, setApproveStatus] = useState<string>("");
-  // Approve function using ethers.js
-  async function handleApprove() {
-    if (!signer || !ipfsHashParam) {
-      setApproveStatus("No signer or token hash");
-      return;
-    }
-    try {
-      setApproveStatus("Approving...");
-      // Replace with your contract address and ABI
-      const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
-      const ABI = [
-        // Minimal ERC721 approve ABI
-        "function approve(address to, uint256 tokenId) public"
-      ];
-      const contract = new (await import("ethers")).ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-      // For demonstration, approve the dashboard user address for this tokenId
-      // You may want to pass a real address and tokenId
-      const toAddress = signer.address || await signer.getAddress();
-      // Use ipfsHashParam as tokenId if possible, else prompt user
-      // If tokenId is not a number, you may need to map it
-      const tokenId = typeof ipfsHashParam === 'string' && !isNaN(Number(ipfsHashParam)) ? Number(ipfsHashParam) : 0;
-      const tx = await contract.approve(toAddress, tokenId);
-      await tx.wait();
-      setApproveStatus("Approved!");
-    } catch (err: any) {
-      setApproveStatus("Error: " + (err?.message || String(err)));
-    }
-  }
+  const [isWebpageOpen, setIsWebpageOpen] = useState<boolean>(false);
+  const [webpageUrl, setWebpageUrl] = useState<string>("");
+
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
 
-  // Get additional data from navigation state, fallback to params if needed
+  // Get additional data from navigation state
   const {
     tokenName,
     ipfsHash,
@@ -47,77 +21,189 @@ export const TokenInfoViewer: React.FC = () => {
     username,
   } = location.state || {};
 
-  // Fallback for direct URL access (no state)
   const ipfsHashParam = params.ipfsHash || ipfsHash;
 
+  // Open IPFS page on the right side
+  const openIPFSViewer = () => {
+    if (ipfsHashParam) {
+      setWebpageUrl(`https://ipfs.io/ipfs/${ipfsHashParam}`);
+      setIsWebpageOpen(true);
+    }
+  };
+
+  // Open custom webpage
+  const openCustomWebpage = (url: string) => {
+    setWebpageUrl(url);
+    setIsWebpageOpen(true);
+  };
+
+  const closeWebpage = () => {
+    setIsWebpageOpen(false);
+    setWebpageUrl("");
+  };
+
+  // Open Etherscan with transaction hash
+  const openEtherscan = () => {
+    if (transactionHash) {
+      openCustomWebpage(`https://sepolia.etherscan.io/tx/${transactionHash}`);
+    } else {
+      // Fallback to main Etherscan if no transaction hash
+      openCustomWebpage('https://sepolia.etherscan.io');
+    }
+  };
+
   return (
-    <div className="container mx-auto p-6">
-      <button
-        onClick={() => navigate('/dashboard')}
-        className="mb-4 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
-      >
-        ← Back to Dashboard
-      </button>
+    <div className="flex h-screen">
+      {/* Main Content - Left Side */}
+      <div className={`${isWebpageOpen ? 'w-1/2' : 'w-full'} container mx-auto p-6 overflow-auto`}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="mb-4 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
+        >
+          ← Back to Dashboard
+        </button>
 
-      <div className="bg-white rounded-xl p-6 shadow-lg">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Token Information</h1>
+        <div className="bg-white rounded-xl p-6 shadow-lg">
+          <h1 className="text-2xl font-bold text-gray-800 mb-6">Token Information</h1>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-semibold text-gray-700">Token Name:</h3>
-            <p className="text-gray-900">{tokenName ? tokenName : 'no name'}</p>
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-semibold text-gray-700">Token Name:</h3>
+              <p className="text-gray-900">{tokenName ? tokenName : 'no name'}</p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>
+              <p className="text-gray-900 break-all">{ipfsHashParam}</p>
+              
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={openIPFSViewer}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                >
+                  Open IPFS on Right Side
+                </button>
+                
+                <a
+                  href={`https://ipfs.io/ipfs/${ipfsHashParam}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
+                >
+                  Open in New Tab
+                </a>
+              </div>
+            </div>
+
+            {/* Transaction Hash Section */}
+            {transactionHash && (
+              <div>
+                <h3 className="font-semibold text-gray-700">Transaction Hash:</h3>
+                <p className="text-gray-900 break-all text-sm font-mono mb-2">{transactionHash}</p>
+                <button
+                  onClick={openEtherscan}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                >
+                  View on Etherscan
+                </button>
+              </div>
+            )}
+
+            {/* Quick Links Section */}
+            <div className="mt-4">
+              <h3 className="font-semibold text-gray-700 mb-2">Quick Links:</h3>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={openEtherscan}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                >
+                  {transactionHash ? 'Etherscan (Tx)' : 'Etherscan'}
+                </button>
+                <button
+                  onClick={() => openCustomWebpage("https://opensea.io")}
+                  className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded"
+                >
+                  OpenSea
+                </button>
+                <button
+                  onClick={() => openCustomWebpage("https://ipfs.io")}
+                  className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded"
+                >
+                  IPFS Gateway
+                </button>
+              </div>
+            </div>
+
+            {/* Additional Information Sections */}
+            {area && (
+              <div>
+                <h3 className="font-semibold text-gray-700">Area:</h3>
+                <p className="text-gray-900">{area}</p>
+              </div>
+            )}
+
+            {minted !== undefined && (
+              <div>
+                <h3 className="font-semibold text-gray-700">Minted:</h3>
+                <p className="text-gray-900">{minted ? 'Yes' : 'No'}</p>
+              </div>
+            )}
+
+            {username && (
+              <div>
+                <h3 className="font-semibold text-gray-700">Username:</h3>
+                <p className="text-gray-900">{username}</p>
+              </div>
+            )}
+
+            {/* Rest of your existing content */}
+            {signer && (
+              <div>
+                <button
+                  className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                  // onClick={handleApprove}
+                >
+                  Approve
+                </button>
+                {approveStatus && (
+                  <div className="mt-2 text-sm text-gray-700">{approveStatus}</div>
+                )}
+              </div>
+            )}
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>
-            <p className="text-gray-900 break-all">{ipfsHashParam}</p>
-            <a
-              href={`https://ipfs.io/ipfs/${ipfsHashParam}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-indigo-600 hover:text-indigo-800 underline mt-2 inline-block"
-            >
-              View on IPFS
-            </a>
-          </div>
-          {signer && (
-            <div>
-              <button
-                className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                // onClick={handleApprove}
-              >
-                Approve
-              </button>
-              {approveStatus && (
-                <div className="mt-2 text-sm text-gray-700">{approveStatus}</div>
-              )}
-            </div>
-          )}
-          {transactionHash && (
-            <div>
-              <h3 className="font-semibold text-gray-700">Transaction Hash:</h3>
-              <p className="text-gray-900 break-all">{transactionHash}</p>
-            </div>
-          )}
-          {area && (
-            <div>
-              <h3 className="font-semibold text-gray-700">Area:</h3>
-              <p className="text-gray-900">{area}</p>
-            </div>
-          )}
-          {minted !== undefined && (
-            <div>
-              <h3 className="font-semibold text-gray-700">Minted:</h3>
-              <p className="text-gray-900">{minted ? 'Yes' : 'No'}</p>
-            </div>
-          )}
-          {username && (
-            <div>
-              <h3 className="font-semibold text-gray-700">Username:</h3>
-              <p className="text-gray-900">{username}</p>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Webpage Viewer - Right Side */}
+      {isWebpageOpen && (
+        <div className="w-1/2 border-l border-gray-300 flex flex-col">
+          <div className="flex justify-between items-center p-4 bg-gray-100 border-b">
+            <span className="font-semibold text-sm truncate">{webpageUrl}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.open(webpageUrl, '_blank')}
+                className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+              >
+                Open in New Tab
+              </button>
+              <button
+                onClick={closeWebpage}
+                className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+          <div className="flex-1">
+            <iframe
+              src={webpageUrl}
+              className="w-full h-full border-0"
+              title="External Webpage"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
