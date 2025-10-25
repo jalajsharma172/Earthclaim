@@ -207,11 +207,8 @@ export default function Dashboard() {
     try {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
  
-      // Create tokenURI from the saved hash
-      const tokenURI = `${nft.IPFShashcode}`;
-      
       // Execute the mintNFT transaction  
-      const transaction = await contract.mintNFT(tokenURI);
+      const transaction = await contract.mintNFT(nft.IPFShashcode);
       
       setTransactionHash(transaction.hash);
       
@@ -222,11 +219,11 @@ export default function Dashboard() {
         alert(`Successfully minted NFT from your saved hash! Transaction: ${transaction.hash}`);
      
         // Update local state to reflect minted status and then save the updated NFT to DB
-const updatedData = nftData?.map(item =>
-  item.IPFShashcode === nft.IPFShashcode
-    ? { ...item, minted: true, transactionHash: transaction.hash }
-    : item
-) || null;
+      const updatedData = nftData?.map(item =>
+        item.IPFShashcode === nft.IPFShashcode
+          ? { ...item, minted: true, transactionHash: transaction.hash }
+          : item
+      ) || null;
 
 setNftData(updatedData);
 console.log(updatedData);
