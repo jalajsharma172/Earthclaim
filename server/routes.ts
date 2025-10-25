@@ -395,7 +395,19 @@ app.post("/api/send-msg", async (req: Request, res: Response) => {
      let telegramResult: any = null;
     try {
       telegramResult = await sendTelegramMessage(text);
-      console.log("Telegram message sent:", telegramResult);
+      if(telegramResult.success==true){
+        return res.json({
+          success: true,
+          message: "Messege Send at telegram . ",
+
+        })
+      }else{
+      return res.json({
+          success: false,
+          message: "Messege not Send at telegram .",
+
+        })
+      }
     } catch (tgErr) {
       console.error("Failed to send Telegram message:", tgErr);
       // do not throw - continue to persist token info; include error in response
