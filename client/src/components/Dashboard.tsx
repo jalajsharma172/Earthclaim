@@ -208,6 +208,8 @@ export default function Dashboard() {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
  
       // Execute the mintNFT transaction  
+      console.log("nft.IPFShashcode   : ",nft.IPFShashcode);
+      
       const transaction = await contract.mintNFT(nft.IPFShashcode);
       
       setTransactionHash(transaction.hash);
