@@ -22,11 +22,20 @@ export const TokenInfoViewer: React.FC = () => {
   } = location.state || {};
 
   const ipfsHashParam = params.ipfsHash || ipfsHash;
-
+  console.log(tokenName," ");
+  console.log(ipfsHash," ");
+  console.log(transactionHash," ");
+  console.log(signer," ");
+  console.log(area," ");
+  console.log(minted," ");
+  console.log(username," ");
+  console.log(ipfsHashParam," ");
+  
+  
   // Open IPFS page on the right side
   const openIPFSViewer = () => {
     if (ipfsHashParam) {
-      setWebpageUrl(`https://ipfs.io/ipfs/${ipfsHashParam}`);
+      setWebpageUrl(`https://ipfs.io/ipfs/${ipfsHash}`);
       setIsWebpageOpen(true);
     }
   };
@@ -41,7 +50,7 @@ export const TokenInfoViewer: React.FC = () => {
     setIsWebpageOpen(false);
     setWebpageUrl("");
   };
-
+//need to take from db
   // Open Etherscan with transaction hash
   const openEtherscan = () => {
     if (transactionHash) {
@@ -69,13 +78,13 @@ export const TokenInfoViewer: React.FC = () => {
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-gray-700">Token Name:</h3>
-              <p className="text-gray-900">{tokenName ? tokenName : 'no name'}</p>
+              <p className="text-gray-900">{tokenName ? tokenName : 'do not recieve'}</p>
             </div>
             
             <div>
-              <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>
-              <p className="text-gray-900 break-all">{ipfsHashParam}</p>
-              
+              <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>:
+              <p className="text-gray-900 break-all">{ipfsHashParam?ipfsHashParam:'do not receive'}</p>
+
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={openIPFSViewer}
@@ -85,7 +94,7 @@ export const TokenInfoViewer: React.FC = () => {
                 </button>
                 
                 <a
-                  href={`https://ipfs.io/ipfs/${ipfsHashParam}`}
+                  href={`https://ipfs.io/ipfs/${ipfsHashParam?ipfsHashParam:'do not receive'}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
@@ -99,7 +108,7 @@ export const TokenInfoViewer: React.FC = () => {
             {transactionHash && (
               <div>
                 <h3 className="font-semibold text-gray-700">Transaction Hash:</h3>
-                <p className="text-gray-900 break-all text-sm font-mono mb-2">{transactionHash}</p>
+                <p className="text-gray-900 break-all text-sm font-mono mb-2">{transactionHash || 'do not receive'}</p>
                 <button
                   onClick={openEtherscan}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
