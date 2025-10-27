@@ -340,37 +340,36 @@ app.post("/api/get-nfts", async (req, res) => {
 
 app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   try {
-    const { recipient, tokenURI, tokenId } = req.body;
-    console.log("Received token info:", { tokenId, tokenURI, recipient });
-
+   const { tokenURI, tokenId } = req.body;
+    console.log("Received token info:", { tokenId, tokenURI });
     
 
-
-
-
-
-
-
-    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${tokenURI}\nToken URI: ${recipient}`;
-    console.log(text);
-    
-     let telegramResult: any = null;
-    try {
-      telegramResult = await sendTelegramMessage(text);
-      console.log("Telegram message sent:", telegramResult);
-    } catch (tgErr) {
-      console.error("Failed to send Telegram message:", tgErr);
-      // do not throw - continue to persist token info; include error in response
+    const recipient=tokenURI;
+    // Always fetch tokenURI from contract
+    let actualTokenURI;
+    try { 
+      // Create server-side provider
+      const provider = new ethers.JsonRpcProvider(process.env.VITE_PROVIDER || "https://eth-sepolia.g.alchemy.com/v2/6JXy53iLZpJ3fxoFvQNAvMJi4Y4tmC_5");
+      actualTokenURI = await fetchTokenURI(tokenId, provider);
+      console.log("Fetched tokenURI from contract:", actualTokenURI);
+      
+    } catch (contractError) {
+      console.error("Failed to fetch tokenURI from contract:", contractError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch tokenURI from contract",
+        error: contractError instanceof Error ? contractError.message : String(contractError)
+      });
     }
 
 
-    const tokeninfo =await TokenInfo(tokenURI,recipient,tokenId);
+    const tokeninfo =await TokenInfo(actualTokenURI,recipient,tokenId);
         if(tokeninfo.success==true){
           return res.status(200).json({
             success: true,
             message: "TokenInfo Saved .",
-            recipient:tokenURI,
-            tokenURI:recipient,
+            recipient:recipient,
+            tokenURI:actualTokenURI,
             tokenId:tokenId,
             data:tokeninfo
           });
@@ -379,8 +378,8 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
           return res.status(500).json({
             success: false,
             message: "TokenInfo Not Saved .",
-            recipient:tokenURI,
-            tokenURI:recipient,
+            recipient:recipient,
+            tokenURI:actualTokenURI,
             tokenId:tokenId,
             data:tokeninfo
           });
