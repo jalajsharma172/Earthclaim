@@ -404,8 +404,9 @@ app.post("/api/send-msg", async (req: Request, res: Response) => {
     // Always fetch tokenURI from contract
     let actualTokenURI;
     try { 
- 
-       actualTokenURI = await fetchTokenURI(tokenId);
+      // Create server-side provider
+      const provider = new ethers.JsonRpcProvider(process.env.VITE_PROVIDER || "https://eth-sepolia.g.alchemy.com/v2/6JXy53iLZpJ3fxoFvQNAvMJi4Y4tmC_5");
+      actualTokenURI = await fetchTokenURI(tokenId, provider);
       console.log("Fetched tokenURI from contract:", actualTokenURI);
       
     } catch (contractError) {
