@@ -20,6 +20,8 @@ import {TokenInfo} from "@shared/TokenInfo.ts"
 import axios from "axios"; 
 import sendTelegramMessage from "./Social_Media_Updates/TelegramMsgUpdate.ts";
 import {UpdateMintedPolygon} from "@shared/UpdateMintedPolygon";
+import { ethers } from "ethers";
+ import fetchTokenURI from "@/components/fetechTokenURI.tsx"; 
 
   // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -340,7 +342,16 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
   try {
     const { recipient, tokenURI, tokenId } = req.body;
     console.log("Received token info:", { tokenId, tokenURI, recipient });
-    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${recipient}\nToken URI: ${tokenURI}`;
+
+    
+
+
+
+
+
+
+
+    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${tokenURI}\nToken URI: ${recipient}`;
     console.log(text);
     
      let telegramResult: any = null;
@@ -353,13 +364,13 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
     }
 
 
-    const tokeninfo =await TokenInfo(recipient,tokenURI,tokenId);
+    const tokeninfo =await TokenInfo(tokenURI,recipient,tokenId);
         if(tokeninfo.success==true){
           return res.status(200).json({
             success: true,
             message: "TokenInfo Saved .",
-            recipient:recipient,
-            tokenURI:tokenURI,
+            recipient:tokenURI,
+            tokenURI:recipient,
             tokenId:tokenId,
             data:tokeninfo
           });
@@ -368,8 +379,8 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
           return res.status(500).json({
             success: false,
             message: "TokenInfo Not Saved .",
-            recipient:recipient,
-            tokenURI:tokenURI,
+            recipient:tokenURI,
+            tokenURI:recipient,
             tokenId:tokenId,
             data:tokeninfo
           });
@@ -387,74 +398,62 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
 
 app.post("/api/send-msg", async (req: Request, res: Response) => {
   try {
-    const { recipient, tokenURI, tokenId } = req.body;
-    console.log("Received token info:", { tokenId, tokenURI, recipient });
-    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${recipient}\nToken URI: ${tokenURI}`;
-    console.log(text);
-    
-     let telegramResult: any = null;
-    try {
-      telegramResult = await sendTelegramMessage(text);
-      if(telegramResult.success==true){
-        return res.json({
-          
-          success: true,
-          message: "Messege Send at telegram . ",
+    const { tokenURI, tokenId } = req.body;
+    console.log("Received token info:", { tokenId, tokenURI });
 
-        })
-      }else{
-      return res.json({
-          success: false,
-          message: "Messege not Send at telegram .",
-
-        })
-      }
-    } catch (tgErr) {
-      console.error("Failed to send Telegram message:", tgErr);
-      // do not throw - continue to persist token info; include error in response
+    // Always fetch tokenURI from contract
+    let actualTokenURI;
+    try { 
+ 
+       actualTokenURI = await fetchTokenURI(tokenId);
+      console.log("Fetched tokenURI from contract:", actualTokenURI);
+      
+    } catch (contractError) {
+      console.error("Failed to fetch tokenURI from contract:", contractError);
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch tokenURI from contract",
+        error: contractError instanceof Error ? contractError.message : String(contractError)
+      });
     }
 
-
+    const text = `A new NFT has been minted!\nToken ID: ${tokenId}\nRecipient: ${tokenURI}\nToken URI: ${actualTokenURI}`;
+    console.log(text);
     
-        if(telegramResult.success==true){
-          return res.status(200).json({
-            success: true,
-            message: "TokenInfo Saved .",
-            recipient:recipient,
-            tokenURI:tokenURI,
-            tokenId:tokenId,
-            data:telegramResult
-          });
-        }else{
-          
-          return res.status(500).json({
-            success: false,
-            message: "TokenInfo Not Saved .",
-            recipient:recipient,
-            tokenURI:tokenURI,
-            tokenId:tokenId,
-            data:telegramResult
-          });
-        }
+    let telegramResult: any = null;
+    try {
+      telegramResult = await sendTelegramMessage(text);
+      
+      return res.json({
+        success: telegramResult?.success === true,
+        message: telegramResult?.success === true ? "Message sent to telegram." : "Message not sent to telegram.",
+        recipient: tokenURI,
+        tokenURI: actualTokenURI,
+        tokenId: tokenId,
+        data: telegramResult
+      });
+      
+    } catch (tgErr) {
+      console.error("Failed to send Telegram message:", tgErr);
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send Telegram message",
+        recipient: tokenURI,
+        tokenURI: actualTokenURI,
+        tokenId: tokenId,
+        error: tgErr instanceof Error ? tgErr.message : String(tgErr)
+      });
+    }
      
   } catch (error) {
-    console.error("Error in /api/tokeninfo:", error);
+    console.error("Error in /api/send-msg:", error);
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : String(error),
     });
   }
 });
-
- 
-  
-
-
-
-
-
-
-
 
 
 
@@ -490,3 +489,5 @@ app.post('/api/save-address',async (req,res) => {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+ 
