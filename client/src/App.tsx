@@ -30,7 +30,6 @@ function App() {
         <div className="min-h-screen bg-gray-900">
           <Switch>
             <Route path="/">
-              {/* Home page without navbar and special styling */}
               <Home />
             </Route>
             <Route>

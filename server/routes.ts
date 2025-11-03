@@ -22,8 +22,13 @@ import sendTelegramMessage from "./Social_Media_Updates/TelegramMsgUpdate.ts";
 import {UpdateMintedPolygon} from "@shared/UpdateMintedPolygon";
 import { ethers } from "ethers";
  import fetchTokenURI from "@/components/fetechTokenURI.tsx"; 
+import { saveLocationToSupabase } from "@shared/SaveCooridnates.ts";
+import { getAllSaveLocations } from "@shared/getAllSaveLocations.ts";
+import { processAndUpdateAllLocations } from "@shared/processSaveLocations.ts";
+import {formatTodayWeather} from "./getWeatherDescription.ts"
+import {saveWeatherReport} from "@shared/saveWeatherReport.ts";
 
-  // API to Login paths
+// API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/login", async (req, res) => {
@@ -47,6 +52,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+
+
+
+  app.post("/api/save-coordinates",async (req,res) => {
+      try {
+        const {username,latitude,longitude}=req.body;
+        console.log(username,latitude,longitude);
+        saveLocationToSupabase(username,latitude,longitude);
+      } catch (err) {
+        console.log("Error in saving ",err);
+      }
+  })
+
+
+
+
+app.get('/api/UpdateallCoordinates/WeatherReport', async (req, res) => {
+    try {
+        // get all data
+        const data = await getAllSaveLocations();
+        if (!data || data.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No locations found to update'
+            });
+        }
+
+        const results = [];
+        for (const location of data) {
+            try {
+                const response = await axios.get(`https://api.open-meteo.com/v1/forecast`, {
+                    params: {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        current_weather: true,
+                        hourly: 'temperature_2m,precipitation,weathercode',
+                        daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum,sunrise,sunset',
+                        timezone: 'auto'
+                    }
+                });
+
+                const weatherReport = formatTodayWeather(response.data);
+                const saveResult = await saveWeatherReport(location.username, weatherReport);
+                
+                results.push({
+                    username: location.username,
+                    success: saveResult.success,
+                    message: saveResult.message,
+                    weatherReport
+                });
+            } catch (error) {
+                console.error(`Error processing location for ${location.username}:`, error);
+                results.push({
+                    username: location.username,
+                    success: false,
+                    message: error instanceof Error ? error.message : 'Unknown error',
+                    weatherReport: null
+                });
+            }
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        res.json({
+            success: true,
+            totalProcessed: data.length,
+            successfulUpdates: successCount,
+            failedUpdates: data.length - successCount,
+            results
+        });
+        
+    } catch (err) {
+        console.error("Error in updating Weather Reports:", err);
+        res.status(500).json({
+            success: false,
+            message: err instanceof Error ? err.message : 'Unknown error occurred'
+        });
+    }
+})
+
+
+
+
+
+
 
   // API to save paths
  app.post("/api/paths", async (req, res) => {

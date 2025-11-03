@@ -16,7 +16,7 @@ export class BrowserStorageService {
   static async saveUserToStorage(userData: UserData): Promise<boolean> {
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify({
-        userData,
+        userData
       })); 
       return true;
     } catch (error) {
