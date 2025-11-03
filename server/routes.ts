@@ -68,7 +68,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-app.get('/api/UpdateallCoordinates/WeatherReport', async (req, res) => {
+app.post('/api/UpdateallCoordinates/WeatherReport', async (req, res) => {
     try {
         // get all data
         const data = await getAllSaveLocations();
