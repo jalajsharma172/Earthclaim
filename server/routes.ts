@@ -442,7 +442,7 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
       actualTokenURI = await fetchTokenURI(tokenId, provider);
       console.log("Fetched tokenURI from contract:", actualTokenURI);
       
-      
+
     } catch (contractError) {
       console.error("Failed to fetch tokenURI from contract:", contractError);
       return res.status(500).json({
@@ -453,7 +453,7 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
     }
 
 
-    const tokeninfo =await TokenInfo(actualTokenURI,recipient,tokenId);
+    const tokeninfo =await TokenInfo(recipient,actualTokenURI,tokenId);
         if(tokeninfo.success==true){
           return res.status(200).json({
             success: true,
@@ -575,6 +575,35 @@ app.post('/api/save-address',async (req,res) => {
     
   }
 })
+
+
+app.post('/api/approve',async (req,res) => {
+
+
+   let telegramResult: any = null;
+    try {
+        const {tokenId,receipient}=req.body;
+        const text=" Testing ";
+      telegramResult = await sendTelegramMessage(text);
+      
+      return res.json({
+        success: telegramResult?.success === true,
+        message: telegramResult?.success === true ? "Message sent to telegram." : "Message not sent to telegram.",
+        data: telegramResult
+      });
+      
+    } catch (tgErr) {
+      console.error("Failed to send Telegram message:", tgErr);
+      
+      return res.status(500).json({
+        success: false,
+        message: "Failed to send Telegram message",
+        error: tgErr instanceof Error ? tgErr.message : String(tgErr)
+      });
+    }
+});
+
+
 
   const httpServer = createServer(app);
   return httpServer;
