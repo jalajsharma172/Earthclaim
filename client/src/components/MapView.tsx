@@ -2,11 +2,21 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useNavigate } from "react-router-dom";
-import axios from "axios"; 
-import {BrowserStorageService} from '@shared/login'
- 
-import {getUserPathByUsername} from "@shared/Get_Path"
-import {savePolygon} from "@shared/Save_Polygon"
+import axios from "axios";
+import { BrowserStorageService, getUserPathByUsername, savePolygon } from './map-helpers';
+
+// Fix Leaflet icon issues
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+
+let DefaultIcon = L.icon({
+    iconUrl: icon,
+    shadowUrl: iconShadow,
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface PathPoint {
   lat: number;
@@ -51,6 +61,8 @@ function MapView() {
   const [isLoopClosed, setIsLoopClosed] = useState(false);
   const [polygonName, setPolygonName] = useState<string>('');
   const [showNameForm, setShowNameForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Fixed: Use state for timer instead of var
   const [timerInterval, setTimerInterval] = useState(3000);
@@ -100,10 +112,38 @@ function MapView() {
 
 // 2️⃣ Initialize map
 useEffect(() => {
-  const mapContainer = document.getElementById('map');
-  if (!mapContainer || mapRef.current) return;
-  
-  if (position.lat !== 0 && position.lon !== 0) {
+  const initMap = async () => {
+    try {
+      const mapContainer = document.getElementById('map');
+      if (!mapContainer) {
+        setError('Map container not found');
+        return;
+      }
+
+      
+      if (mapRef.current) return;
+
+      // Check for geolocation support
+      if (!navigator.geolocation) {
+        setError('Geolocation is not supported by your browser');
+        return;
+      }
+
+      // Get initial position
+      if (position.lat === 0 && position.lon === 0) {
+        navigator.geolocation.getCurrentPosition(
+          ({ coords }) => {
+            setPosition({
+              lat: coords.latitude,
+              lon: coords.longitude,
+              acc: coords.accuracy
+            });
+          },
+          (err) => {
+            setError(`Error getting location: ${err.message}`);
+          }
+        );
+      }
     mapRef.current = L.map('map').setView([position.lat, position.lon], 18);
     
     const googleSatellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
@@ -158,9 +198,13 @@ useEffect(() => {
     }).catch(error => {
       console.error("Error loading user data:", error);
     });
-  }
-}, [position.lat, position.lon]);  
- 
+  }catch (err) {
+      setError(`Error initializing map: ${err}`);
+    }
+  };
+  initMap();
+
+}, [position.lat, position.lon]);
 
 
 // Save UserPath

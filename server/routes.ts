@@ -442,6 +442,7 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
       actualTokenURI = await fetchTokenURI(tokenId, provider);
       console.log("Fetched tokenURI from contract:", actualTokenURI);
       
+      
     } catch (contractError) {
       console.error("Failed to fetch tokenURI from contract:", contractError);
       return res.status(500).json({
