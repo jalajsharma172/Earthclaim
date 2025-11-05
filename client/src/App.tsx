@@ -59,7 +59,7 @@ function App() {
                       <NFTPolygonViewer />
                     </Route>
                     <Route path="/token-info/:ipfsHash">
-                      <TokenInfoViewer />
+                      <TokenInfoViewer  />
                     </Route>
                     <Route path="/marketplace">
                       <Marketplace marketplace={marketplace} nft={nft} />

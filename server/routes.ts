@@ -27,6 +27,10 @@ import { getAllSaveLocations } from "@shared/getAllSaveLocations.ts";
 import { processAndUpdateAllLocations } from "@shared/processSaveLocations.ts";
 import {formatTodayWeather} from "./getWeatherDescription.ts"
 import {saveWeatherReport} from "@shared/saveWeatherReport.ts";
+import {getTokenId} from "@shared/Get_ID.ts";
+
+
+
 
 // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -483,6 +487,52 @@ app.post("/api/tokeninfo", async (req: Request, res: Response) => {
     });
   }
 });
+
+
+
+
+app.post("/api/get-id",async (req,res)=> {
+  try {
+    const {tokenURI} =req.body;
+    console.log("Received token info:", { tokenURI });
+    const tokenID=await getTokenId(tokenURI);
+    if(tokenID.success==true){
+      return res.status(200).json({
+        success: true,
+        message: "Token ID fetched successfully .",
+        tokenID:tokenID.tokenID
+      });
+    }else{
+      return res.status(500).json({
+        success: false,
+        message: "Token ID Not fetched .",
+        tokenID:tokenID.tokenID
+      });
+    }
+
+
+
+
+
+
+  } catch (err) {
+    console.log("Error is at server ",err);
+      return res.status(500).json({
+        success: false,
+        message: "Server Error in fetching Token ID .",
+      });
+  }
+})
+
+
+
+
+
+
+
+
+
+
 
 
 app.post("/api/send-msg", async (req: Request, res: Response) => {

@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-
+import {address} from "../contractsData/Marketplace-address.json"
 export const TokenInfoViewer: React.FC = () => {
   const [approveStatus, setApproveStatus] = useState<string>("");
   const [isWebpageOpen, setIsWebpageOpen] = useState<boolean>(false);
   const [webpageUrl, setWebpageUrl] = useState<string>("");
+  const [inputValue1, setInputValue1] = useState<string>(address || ""); // First input value
+  const [inputValue2, setInputValue2] = useState<string>(""); // Second input value
 
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
 
-  // Get additional data from navigation state
   const {
     tokenName,
     ipfsHash,
@@ -22,6 +24,7 @@ export const TokenInfoViewer: React.FC = () => {
   } = location.state || {};
 
   const ipfsHashParam = params.ipfsHash || ipfsHash;
+
   console.log(tokenName," ");
   console.log(ipfsHash," ");
   console.log(transactionHash," ");
@@ -31,7 +34,32 @@ export const TokenInfoViewer: React.FC = () => {
   console.log(username," ");
   console.log(ipfsHashParam," ");
   
+
+const [tokenId,settokenId]=useState<number | null>(null);
   
+useEffect(() => {
+  console.log("TokenInfoViewer mounted");
+  const fetchTokenID = async () => {
+    try {
+      const resp = await axios.post('/api/get-id', { tokenURI: ipfsHashParam });
+      const data = resp?.data;
+      settokenId(data?.tokenID?.tokenId ?? null);
+      setInputValue2(data?.tokenID?.tokenId ?? null);
+      if (data?.success === true) {
+        console.log("Token ID fetched successfully:", data.tokenID);
+      } else {
+        console.error("Failed to fetch Token ID:", data?.message ?? 'Unknown error');
+      }
+    } catch (err) {
+      console.error("Error fetching Token ID:", err);
+    }
+  };
+
+  if (ipfsHashParam) {
+    fetchTokenID();
+  }
+}, [ipfsHashParam]);
+
   // Open IPFS page on the right side
   const openIPFSViewer = () => {
     if (ipfsHashParam) {
@@ -50,7 +78,7 @@ export const TokenInfoViewer: React.FC = () => {
     setIsWebpageOpen(false);
     setWebpageUrl("");
   };
-//need to take from db
+
   // Open Etherscan with transaction hash
   const openEtherscan = () => {
     if (transactionHash) {
@@ -82,9 +110,12 @@ export const TokenInfoViewer: React.FC = () => {
             </div>
             
             <div>
-              <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>:
+              <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>
               <p className="text-gray-900 break-all">{ipfsHashParam?ipfsHashParam:'do not receive'}</p>
 
+              <h3 className="font-semibold text-gray-700">Token ID :</h3>
+              <p className="text-gray-900 break-all">{tokenId?tokenId:'do not receive'}</p>
+              
               <div className="flex gap-2 mt-2">
                 <button
                   onClick={openIPFSViewer}
@@ -165,15 +196,36 @@ export const TokenInfoViewer: React.FC = () => {
               </div>
             )}
 
-            {/* Rest of your existing content */}
+            {/* Approve Section with Input Boxes */}
             {signer && (
-              <div>
-                <button
-                  className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                  // onClick={handleApprove}
-                >
-                  Approve
-                </button>
+              <div className="mt-4">
+                <div className="flex items-center gap-4 mb-4">
+                  <button
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                    // onClick={handleApprove}
+                  >
+                    Approve
+                  </button>
+                  
+                  {/* Two Input Boxes */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inputValue1}
+                      onChange={(e) => setInputValue1(e.target.value)}
+                      placeholder="Enter value 1"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <input
+                      type="text"
+                      value={inputValue2}
+                      onChange={(e) => setInputValue2(e.target.value)}
+                      placeholder="Enter value 2"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
                 {approveStatus && (
                   <div className="mt-2 text-sm text-gray-700">{approveStatus}</div>
                 )}
