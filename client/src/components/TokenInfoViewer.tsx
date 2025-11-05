@@ -1,18 +1,41 @@
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import {address} from "../contractsData/Marketplace-address.json"
-export const TokenInfoViewer: React.FC = () => {
+import { useLocation, useRoute } from "wouter";
+import { address } from "../contractsData/Marketplace-address.json";
+import { Contract } from 'ethers';
+import { ethers, BrowserProvider } from 'ethers';
+interface TokenInfoViewerProps {
+  nft: Contract | null;
+}
+const getSigner = async (): Promise<ethers.Signer | null> => {
+  if (typeof window.ethereum !== 'undefined') {
+    try {
+      // Request account access
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const provider = new BrowserProvider(window.ethereum);
+      return await provider.getSigner();
+    } catch (error) {
+      console.error('User denied account access:', error);
+      return null;
+    }
+  } else {
+    console.error('MetaMask not installed');
+    return null;
+  }
+};
+export const TokenInfoViewer: React.FC<TokenInfoViewerProps> = ({ nft }) => {
   const [approveStatus, setApproveStatus] = useState<string>("");
   const [isWebpageOpen, setIsWebpageOpen] = useState<boolean>(false);
   const [webpageUrl, setWebpageUrl] = useState<string>("");
-  const [inputValue1, setInputValue1] = useState<string>(address || ""); // First input value
-  const [inputValue2, setInputValue2] = useState<string>(""); // Second input value
+  const [inputValue1, setInputValue1] = useState<string>(address || "");
+  const [inputValue2, setInputValue2] = useState<string>("");
+  const [isApproving, setIsApproving] = useState(false);
+  
+  // Wouter hooks
+  const [location, setLocation] = useLocation();
+  const [match, params] = useRoute("/token-info/:ipfsHash");
 
-  const location = useLocation();
-  const navigate = useNavigate();
-  const params = useParams();
-
+  // For now, using empty defaults since wouter doesn't have location.state
   const {
     tokenName,
     ipfsHash,
@@ -21,49 +44,44 @@ export const TokenInfoViewer: React.FC = () => {
     area,
     minted,
     username,
-  } = location.state || {};
+  } = {};
 
-  const ipfsHashParam = params.ipfsHash || ipfsHash;
+  const ipfsHashParam = params?.ipfsHash || ipfsHash;
 
-  console.log(tokenName," ");
-  console.log(ipfsHash," ");
-  console.log(transactionHash," ");
-  console.log(signer," ");
-  console.log(area," ");
-  console.log(minted," ");
-  console.log(username," ");
-  console.log(ipfsHashParam," ");
+  console.log("NFT Contract:", nft);
+  console.log("Token Name:", tokenName);
+  console.log("IPFS Hash:", ipfsHash);
+  console.log("IPFS Hash Param:", ipfsHashParam);
+
+  const [tokenId, setTokenId] = useState<number | null>(null);
   
-
-const [tokenId,settokenId]=useState<number | null>(null);
-  
-useEffect(() => {
-  console.log("TokenInfoViewer mounted");
-  const fetchTokenID = async () => {
-    try {
-      const resp = await axios.post('/api/get-id', { tokenURI: ipfsHashParam });
-      const data = resp?.data;
-      settokenId(data?.tokenID?.tokenId ?? null);
-      setInputValue2(data?.tokenID?.tokenId ?? null);
-      if (data?.success === true) {
-        console.log("Token ID fetched successfully:", data.tokenID);
-      } else {
-        console.error("Failed to fetch Token ID:", data?.message ?? 'Unknown error');
+  useEffect(() => {
+    console.log("TokenInfoViewer mounted");
+    const fetchTokenID = async () => {
+      try {
+        const resp = await axios.post('/api/get-id', { tokenURI: ipfsHashParam });
+        const data = resp?.data;
+        setTokenId(data?.tokenID?.tokenId ?? null);
+        setInputValue2(data?.tokenID?.tokenId?.toString() ?? "");
+        if (data?.success === true) {
+          console.log("Token ID fetched successfully:", data.tokenID);
+        } else {
+          console.error("Failed to fetch Token ID:", data?.message ?? 'Unknown error');
+        }
+      } catch (err) {
+        console.error("Error fetching Token ID:", err);
       }
-    } catch (err) {
-      console.error("Error fetching Token ID:", err);
-    }
-  };
+    };
 
-  if (ipfsHashParam) {
-    fetchTokenID();
-  }
-}, [ipfsHashParam]);
+    if (ipfsHashParam) {
+      fetchTokenID();
+    }
+  }, [ipfsHashParam]);
 
   // Open IPFS page on the right side
   const openIPFSViewer = () => {
     if (ipfsHashParam) {
-      setWebpageUrl(`https://ipfs.io/ipfs/${ipfsHash}`);
+      setWebpageUrl(`https://ipfs.io/ipfs/${ipfsHashParam}`);
       setIsWebpageOpen(true);
     }
   };
@@ -84,8 +102,39 @@ useEffect(() => {
     if (transactionHash) {
       openCustomWebpage(`https://sepolia.etherscan.io/tx/${transactionHash}`);
     } else {
-      // Fallback to main Etherscan if no transaction hash
       openCustomWebpage('https://sepolia.etherscan.io');
+    }
+  };
+
+  // Navigate back using wouter
+  const navigateToDashboard = () => {
+    setLocation('/dashboard');
+  };
+
+  // Handle approve function - similar to commented version
+  const handleApprove = async () => {
+    if (!nft || !tokenId) {
+      setApproveStatus("NFT contract or Token ID not available");
+      return;
+    }
+
+    try {
+      setIsApproving(true);
+      setApproveStatus("Approving...");
+    console.log("NFT:", nft);
+    console.log("Token ID:", tokenId);
+    console.log("NFT contract address is ",inputValue1);
+      
+      const tx = await nft.approve(inputValue1, tokenId);
+      await tx.wait();
+      setApproveStatus("Approved successfully!");
+    } catch (error: any) {
+      console.error("Approval error:", error);
+      setApproveStatus(
+        error?.message || "Approval failed. Please check your wallet connection."
+      );
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -94,7 +143,7 @@ useEffect(() => {
       {/* Main Content - Left Side */}
       <div className={`${isWebpageOpen ? 'w-1/2' : 'w-full'} container mx-auto p-6 overflow-auto`}>
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={navigateToDashboard}
           className="mb-4 px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
         >
           ← Back to Dashboard
@@ -103,18 +152,31 @@ useEffect(() => {
         <div className="bg-white rounded-xl p-6 shadow-lg">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Token Information</h1>
 
+          {/* Display NFT contract status */}
+          {nft ? (
+            <div className="mb-4 p-3 bg-green-100 rounded-lg">
+              <h3 className="font-semibold text-green-700">✓ NFT Contract Connected</h3>
+              <p className="text-green-600 text-sm">Contract address: {nft.address}</p>
+            </div>
+          ) : (
+            <div className="mb-4 p-3 bg-red-100 rounded-lg">
+              <h3 className="font-semibold text-red-700">✗ NFT Contract Not Available</h3>
+              <p className="text-red-600 text-sm">Please connect your wallet first</p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <h3 className="font-semibold text-gray-700">Token Name:</h3>
-              <p className="text-gray-900">{tokenName ? tokenName : 'do not recieve'}</p>
+              <p className="text-gray-900">{tokenName || 'Not available'}</p>
             </div>
             
             <div>
               <h3 className="font-semibold text-gray-700">IPFS Hash:</h3>
-              <p className="text-gray-900 break-all">{ipfsHashParam?ipfsHashParam:'do not receive'}</p>
+              <p className="text-gray-900 break-all">{ipfsHashParam || 'Not available'}</p>
 
-              <h3 className="font-semibold text-gray-700">Token ID :</h3>
-              <p className="text-gray-900 break-all">{tokenId?tokenId:'do not receive'}</p>
+              <h3 className="font-semibold text-gray-700">Token ID:</h3>
+              <p className="text-gray-900 break-all">{tokenId || 'Not available'}</p>
               
               <div className="flex gap-2 mt-2">
                 <button
@@ -125,7 +187,7 @@ useEffect(() => {
                 </button>
                 
                 <a
-                  href={`https://ipfs.io/ipfs/${ipfsHashParam?ipfsHashParam:'do not receive'}`}
+                  href={`https://ipfs.io/ipfs/${ipfsHashParam || ''}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg"
@@ -139,7 +201,7 @@ useEffect(() => {
             {transactionHash && (
               <div>
                 <h3 className="font-semibold text-gray-700">Transaction Hash:</h3>
-                <p className="text-gray-900 break-all text-sm font-mono mb-2">{transactionHash || 'do not receive'}</p>
+                <p className="text-gray-900 break-all text-sm font-mono mb-2">{transactionHash}</p>
                 <button
                   onClick={openEtherscan}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
@@ -196,38 +258,52 @@ useEffect(() => {
               </div>
             )}
 
-            {/* Approve Section with Input Boxes */}
-            {signer && (
+            {/* Approve Section with Input Boxes - Using the commented version structure */}
+            {nft && (
               <div className="mt-4">
                 <div className="flex items-center gap-4 mb-4">
                   <button
-                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
-                    // onClick={handleApprove}
+                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:bg-gray-400"
+                    onClick={handleApprove}
+                    disabled={!nft || !tokenId || isApproving}
                   >
-                    Approve
+                    {isApproving ? "Approving..." : "Approve"}
                   </button>
                   
-                  {/* Two Input Boxes */}
+                  {/* Input Boxes for Address and TokenId */}
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={inputValue1}
-                      onChange={(e) => setInputValue1(e.target.value)}
-                      placeholder="Enter value 1"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <input
-                      type="text"
-                      value={inputValue2}
-                      onChange={(e) => setInputValue2(e.target.value)}
-                      placeholder="Enter value 2"
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={inputValue1}
+                        onChange={(e) => setInputValue1(e.target.value)}
+                        placeholder="Marketplace Address"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <div className="text-xs text-gray-500 mt-1">Marketplace Contract Address</div>
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        value={inputValue2}
+                        onChange={(e) => setInputValue2(e.target.value)}
+                        placeholder="Token ID"
+                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        disabled
+                      />
+                      <div className="text-xs text-gray-500 mt-1">Token ID (Auto-filled)</div>
+                    </div>
                   </div>
                 </div>
                 
                 {approveStatus && (
-                  <div className="mt-2 text-sm text-gray-700">{approveStatus}</div>
+                  <div className={`mt-2 text-sm ${
+                    approveStatus.includes("successfully") ? "text-green-600" : 
+                    approveStatus.includes("error") || approveStatus.includes("failed") ? "text-red-600" : 
+                    "text-gray-700"
+                  }`}>
+                    {approveStatus}
+                  </div>
                 )}
               </div>
             )}

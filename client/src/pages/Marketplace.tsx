@@ -7,11 +7,14 @@ const Marketplace = ({ marketplace, nft }) => {
   const [items, setItems] = useState<any[]>([])
   const navigate = useNavigate()
   
+
   const loadMarketplaceItems = async () => {
     try {  
         console.log("Starting to load marketplace items...");
-        console.log("Marketplace contract:", marketplace);
+
         
+        console.log("Marketplace contract:", marketplace);
+
         // Load all unsold items
         const itemCount = await marketplace.itemCount();
         console.log("Total item count:", itemCount.toString());
