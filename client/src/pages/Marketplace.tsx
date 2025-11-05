@@ -169,7 +169,14 @@ const Marketplace = ({ marketplace, nft }) => {
                       <div className="text-cyan-400 font-mono text-sm border border-cyan-400 px-3 py-1 inline-block rounded hover:bg-cyan-400 hover:text-gray-900 transition-colors ml-2"
                       onClick={(e)=>{
                         e.stopPropagation(); // Stop event from bubbling up
-                        navigate("/request");
+                        navigate("/request",{
+                          state:{
+                            tokenURI:it.uri,
+                            itemId: it.itemId,
+                            _price: it.price,
+                            seller: it.seller
+                          }
+                        });
                       }}
                       >
                         Send Req
@@ -204,7 +211,7 @@ const Marketplace = ({ marketplace, nft }) => {
           <div className="max-w-4xl mx-auto flex justify-between text-cyan-400 font-mono text-sm px-4">
             <div>🔄 REAL-TIME SYNC</div>
             <div>🔒 SECURE TRANSACTIONS</div>
-            <div>🌐 POLYGON NETWORK</div>
+            <div>🌐 Ethereum NETWORK</div>
           </div>
         </div>
       </div>
@@ -213,123 +220,3 @@ const Marketplace = ({ marketplace, nft }) => {
 }
 
 export default Marketplace;
-// import { useState, useEffect } from 'react'
-// import { ethers } from "ethers" 
-// import { useNavigate } from 'react-router-dom'
-
-// const Marketplace = ({ marketplace, nft }) => {
-//   const [loading, setLoading] = useState(true)
-//   const [items, setItems] = useState<any[]>([])
-//   const navigate = useNavigate()
-//   const loadMarketplaceItems = async () => {
-//     try {  
-//         console.log("Starting to load marketplace items...");
-//         console.log("Marketplace contract:", marketplace);
-        
-//         // Load all unsold items
-//         const itemCount = await marketplace.itemCount();
-//         console.log("Total item count:", itemCount.toString());
-        
-//         let items = []
-//         try {
-//         for (let i = 0; i <= itemCount; i++) {
-
-//             try {
-//                 const item = await marketplace.items(i);
-//                 // console.log(`Item ${i}:`, item);
-                
-//                 if (!item.sold) { 
-//                     const uri = await nft.tokenURI(item.tokenId); 
-//                     // const totalPrice = await marketplace.getTotalPrice(item.itemId);
-                    
-                    
-//                     items.push({
-//                         itemId: item.itemId,
-//                         price: ethers.formatEther(item.price),
-//                         seller: item.seller,
-//                         uri: uri
-//                     });
-//                 }
-//             } catch (error) {
-//               console.log("Error in the loop for item");
-              
-//                 console.error(`Error in the loop for item${i}:`, error);
-//             }
-//         }
-//         } catch (err) {
-          
-//         }
-//   console.log("Processed items:", items);
-//   // save loaded items to state so UI can render
-//   setItems(items);
-//   setLoading(false);
-//     } catch (error) {
-//         console.error("Error in loadMarketplaceItems:", error);
-//         setLoading(false);  // Set loading to false even on error
-//     }
-//   }
-
-//     // const buyMarketItem = async (item) => {
-//     //     await (await marketplace.purchaseItem(item.itemId, { value: item.totalPrice })).wait()
-//     //   loadMarketplaceItems();
-//     // }
-
-
- 
-//     useEffect(() => {
-//     loadMarketplaceItems();
-//   }, []);
-
-
-//   if (loading ) return (
-//     <main style={{ padding: "1rem 0" }}>
-//       <h2>Loading...</h2>
-//     </main>
-//   )
-
-//   return (
-//     <div className="flex justify-center">
-//       {items.length > 0 ?
-//         <div className="px-5 container">
-//           <div className="row">
-//             {items.map((it, idx) => (
-//               <div key={idx} className="col-md-6 col-lg-4 mb-4" >
-//                 <div className="card h-100 shadow-sm">
-//                   <div
-//                     className="card-body cursor-pointer"
-//                     onClick={() => {
-//                       // encode the uri so slashes/colons don't break the route
-//                       const encoded = encodeURIComponent(it.uri)
-//                       navigate(`/token-info/${encoded}`, {
-//                         state: {
-//                           tokenName: it.Name || 'URL Unnamed Token',
-//                           ipfsHash: it.uri || 'URL undefined',
-//                           transactionHash: it.transactionHash || 'URL undefined',
-//                           minted: true,
-//                           username: 'URL undefined',
-//                           area: it.area || 'URL area not defined'
-//                         }
-//                       })
-//                     }}
-//                   >
-//                     <h5 className="card-title">Token ID  {it.itemId}</h5>
-//                     <p className="card-text"><strong>Seller:</strong> {it.seller}</p>
-
-//                     <p className="card-text"><strong>Price:</strong> {it.price} ETH</p>
-//                     <p className="card-text"><strong>URI :</strong> {it.uri} </p>
-//                   </div>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//         : (
-//           <main style={{ padding: "1rem 0" }}>
-//             <h2>No listed assets</h2>
-//           </main>
-//         )}
-//     </div>
-//   );
-// }
-
-// export default Marketplace;

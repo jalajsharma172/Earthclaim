@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { ethers } from 'ethers'
+import { useLocation } from 'react-router-dom'
 
 interface CreateProps {
   marketplace: any
@@ -14,6 +15,9 @@ const Create = ({ marketplace, nft }: CreateProps) => {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+
+  
+
   const validate = () => {
     if (!tokenId.trim()) {
       setError('Token ID is required')
@@ -22,7 +26,7 @@ const Create = ({ marketplace, nft }: CreateProps) => {
     if (!tokenaddress.trim()) {
       setError('Token contract address is required')
       return false
-    }
+    }     
     if (!price || Number(price) <= 0) {
       setError('Please enter a valid price')
       return false

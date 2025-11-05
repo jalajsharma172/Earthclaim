@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers';
+import { useLocation } from "react-router-dom";
 
 interface RequestProps {
   marketplace: any;
@@ -7,15 +8,27 @@ interface RequestProps {
 }
 
 export default function Request({ marketplace, nft }: RequestProps) {
+
+  const location = useLocation();
+  const { tokenURI, itemId, _price, seller } = location.state || {};
+  console.log("Token URI ",tokenURI);
+  console.log("Item ID ",itemId);
+  console.log("Price ",_price);
+  console.log("Seller ",seller);
+console.log("--------------------------------------");
+
+  
+
+
   const [leftForm, setLeftForm] = useState({
     nftContractAddress: '',
     nftTokenId: ''
   });
   
   const [rightForm, setRightForm] = useState({
-    nftContractAddress: '',
-    nftTokenId: '',
-    userAddress: ''
+nftContractAddress: '',
+    nftTokenId: itemId || '',
+    userAddress: seller || ''
   });
 
   const [isLoading, setIsLoading] = useState(false);
