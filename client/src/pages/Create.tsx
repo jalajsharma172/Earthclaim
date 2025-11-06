@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { ethers } from 'ethers'
 import { useLocation } from 'react-router-dom'
-
+const VITE_CONTRACT_ADDRESS=import.meta.env.VITE_CONTRACT_ADDRESS ;
 interface CreateProps {
   marketplace: any
   nft: any
@@ -10,7 +10,7 @@ interface CreateProps {
 const Create = ({ marketplace, nft }: CreateProps) => {
   const [price, setPrice] = useState<string>('')
   const [tokenId, setTokenID] = useState<string>('')
-  const [tokenaddress, setTokenAddress] = useState<string>('')
+  const [tokenaddress, setTokenAddress] = useState<string>(VITE_CONTRACT_ADDRESS || ' ')
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -49,7 +49,7 @@ const Create = ({ marketplace, nft }: CreateProps) => {
       setMessage(null)
       const listingPrice = (ethers as any).parseEther(price.toString())
 
-      const tx = await marketplace.makeItem(tokenaddress, tokenId, listingPrice)
+      const tx = await marketplace.makeItem(tokenaddress, tokenId, listingPrice);
       setMessage('Transaction sent — waiting for confirmation...')
       await tx.wait()
       setMessage('NFT listed successfully!')
