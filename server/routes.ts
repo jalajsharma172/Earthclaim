@@ -636,6 +636,46 @@ app.post("/api/send-msg", async (req: Request, res: Response) => {
 
 
 
+  // Create a Marketplace item notification
+  // Expects: { itemId, nft, tokenId, price, seller }
+  app.post("/api/marketplace/newitem", async (req: Request, res: Response) => {
+    try {
+      const { itemId, nft, tokenId, price, seller } = req.body || {};
+
+      const text = `New Marketplace Listing\n` +
+        `Item ID: ${itemId ?? "N/A"}\n` +
+        `NFT: ${nft ?? "N/A"}\n` +
+        `Token ID: ${tokenId ?? "N/A"}\n` +
+        `Price: ${price ?? "N/A"}\n` +
+        `Seller: ${seller ?? "N/A"}`;
+
+      try {
+        const result = await sendTelegramMessage(text);
+        return res.status(200).json({
+          success: result?.success === true,
+          message: result?.success === true ? "Message sent to telegram." : "Message not sent to telegram.",
+          data: {
+            itemId, nft, tokenId, price, seller,
+            telegram: result
+          }
+        });
+      } catch (tgErr) {
+        console.error("Failed to send Telegram message:", tgErr);
+        return res.status(500).json({
+          success: false,
+          message: "Failed to send Telegram message",
+          error: tgErr instanceof Error ? tgErr.message : String(tgErr)
+        });
+      }
+    } catch (err) {
+      console.error("Error in /api/marketplace/newitem:", err);
+      return res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : "Unknown server error"
+      });
+    }
+  });
+
 
   
 app.post('/api/detect-loops', async(req, res) => {
