@@ -28,6 +28,7 @@ import { processAndUpdateAllLocations } from "@shared/processSaveLocations.ts";
 import {formatTodayWeather} from "./getWeatherDescription.ts"
 import {saveWeatherReport} from "@shared/saveWeatherReport.ts";
 import {getTokenId} from "@shared/Get_ID.ts";
+import {getTop3Rewards} from "@shared/getTop3Rewards.ts";
 
 
 
@@ -570,6 +571,80 @@ app.post("/api/send-msg-approval", async (req: Request, res: Response) => {
 });
 
 
+app.post("/api/auto-pay", async (req: Request, res: Response) => {
+  try {
+    console.log("Auto-pay rewards triggered for top 3 users");
+    
+    // Get top 3 users from leaderboard
+    const result = await getTop3Rewards();
+    
+    if (!result.success || !result.data || result.data.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found in leaderboard to reward",
+        error: result.error
+      });
+    }
+
+    // Define reward amounts in ETH (dummy values)
+    const rewardAmounts = [0.1, 0.05, 0.025]; // 1st, 2nd, 3rd place rewards
+    
+    // Simulate payment transactions
+    const paymentResults = result.data.map((user, index) => {
+      const rewardAmount = rewardAmounts[index] || 0.01;
+      const dummyTxHash = `0x${Math.random().toString(16).substring(2, 66)}`;
+      
+      return {
+        rank: index + 1,
+        username: user.UserName,
+        address: user.Address,
+        nftCount: user.Number_of_NFTs,
+        rewardAmount: `${rewardAmount} ETH`,
+        transactionHash: dummyTxHash,
+        status: "success",
+        timestamp: new Date().toISOString()
+      };
+    });
+
+    // Create Telegram notification message
+    const telegramText = `🎉 Auto-Reward Payout Complete!\n\n` +
+      paymentResults.map(p => 
+        `🥇 Rank ${p.rank}: ${p.username}\n` +
+        `   💰 Reward: ${p.rewardAmount}\n` +
+        `   🎨 NFTs: ${p.nftCount}\n` +
+        `   📝 Address: ${p.address.substring(0, 10)}...${p.address.substring(38)}\n` +
+        `   ✅ TX: ${p.transactionHash.substring(0, 10)}...`
+      ).join('\n\n');
+
+    // Send Telegram notification
+    let telegramSent = false;
+    try {
+      const telegramResult = await sendTelegramMessage(telegramText);
+      telegramSent = telegramResult?.success === true;
+    } catch (tgErr) {
+      console.error("Failed to send Telegram notification:", tgErr);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully paid rewards to ${paymentResults.length} users`,
+      data: {
+        totalRecipients: paymentResults.length,
+        totalRewardsETH: rewardAmounts.slice(0, paymentResults.length).reduce((a, b) => a + b, 0),
+        payments: paymentResults,
+        telegramNotification: telegramSent ? "sent" : "failed"
+      }
+    });
+    
+  } catch (err) {
+    console.error("Error in /api/auto-pay:", err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error in auto-pay",
+      error: err instanceof Error ? err.message : String(err)
+    });
+  }
+});
 
 
 
@@ -732,8 +807,45 @@ app.post('/api/approve',async (req,res) => {
     }
 });
 
+  // API to get top 3 users for rewards from Leaderboard
+  app.post("/api/rewards/top3", async (req: Request, res: Response) => {
+    try {
+      const result = await getTop3Rewards();
 
 
+
+
+      
+
+
+
+
+      if (!result.success) {
+        return res.status(result.data && result.data.length === 0 ? 404 : 500).json({
+          success: false,
+          message: result.message,
+          error: result.error,
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: result.message,
+        data: {
+          top3Users: result.data,
+          usernames: result.data?.map((user) => user.UserName) || [],
+        },
+      });
+    } catch (err) {
+      console.error("Error in /api/rewards/top3:", err);
+      return res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : "Unknown server error",
+      });
+    }
+  });
+
+  
   const httpServer = createServer(app);
   return httpServer;
 }
