@@ -14,7 +14,7 @@ import { Position } from "geojson";
 import { UserPolygon } from '@shared/schema'
 import { deletePolygon } from "@shared/delete_Polygon"
 import { detectClosedLoopsHandler } from "./loop_detection.ts";
-import { getPolygonJSON } from "@shared/Get_Polygons.ts"
+import { getPolygonJSON, getUserPolygonByWalletAddress } from "@shared/Get_Polygons.ts"
 import { responseEncoding } from "axios";
 import { TokenInfo } from "@shared/TokenInfo.ts"
 import axios from "axios";
@@ -38,14 +38,24 @@ import { supabase } from "@shared/supabaseClient.ts";
 // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
 
+
+
+
+
+
+
+
+
+
+
   app.post("/api/auth/login", async (req, res) => {
     try {
       console.log("Login request body:", req.body);
-      const { useremail, username } = loginSchema.parse(req.body);
+      const { useremail, username, walletAddress } = loginSchema.parse(req.body);
 
       let user;
-      if (useremail && useremail.trim() !== "") {
-        user = await SuprabaseStorageService(username, useremail);// check + new user register bhi kr dega .
+      if (walletAddress || (useremail && useremail.trim() !== "")) {
+        user = await SuprabaseStorageService(username, useremail, walletAddress);
       }
 
       res.json({ user });
@@ -57,6 +67,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
         res.status(500).json({ message: "Server error", error: errorMessage });
       }
+    }
+  });
+
+  app.all("/api/test-db", async (req, res) => {
+    try {
+      console.log("Testing Supabase Connection...");
+      const { data, error } = await supabase.from('users').select('*').limit(1);
+
+      if (error) {
+        //   console.error("Supabase Test Error:", error);
+        return res.status(500).json({ success: false, error: error });
+      }
+
+      console.log("Supabase Test Success:", data);
+      return res.status(200).json({ success: true, data: data });
+
+    } catch (err) {
+      console.error("Supabase Test Exception:", err);
+      return res.status(500).json({
+        success: false,
+        message: "Exception connecting to Supabase",
+        error: err instanceof Error ? err.message : String(err)
+      });
     }
   });
 
@@ -237,8 +270,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   // API to get free polygons
-  app.get("/api/free-polygons", (req, res) => {
-    res.json(FREE_POLYGONS);
+  // API to get free polygons
+  app.get("/api/free-polygons", async (req, res) => {
+    const walletaddress = req.query.walletaddress as string;
+    // Fetch polygons for the wallet (empty list if no wallet provided)
+    const userPolygons = await getUserPolygonByWalletAddress(walletaddress);
+    res.json(userPolygons);
   });
 
   // POST API to save polygons to UserPolygon table
@@ -437,6 +474,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'No NFT data found for user'
         });
       }
+
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error
+      });
+    }
+  });
+
+  app.post("/api/freenfts", async (req, res) => {
+    try {
+      const { username } = req.body;
+
+      if (!username) {
+        console.log("Username is missing or empty - returning 400");
+        return res.status(400).json({
+          success: false,
+          message: 'No UserName found at API Body'
+        });
+      }
+      const data = await getUserPolygonByWalletAddress(username);
+      console.log("data", data);
+      if (data.length > 0) {
+        res.status(200).json({
+          success: true,
+          status: true,
+          data: data
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          data: data,
+          status: false,
+          username: username,
+
+          message: 'No Free NFT data found for user'
+        });
+      }
+
 
     } catch (error) {
       res.status(500).json({

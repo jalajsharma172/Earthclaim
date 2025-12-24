@@ -4,50 +4,14 @@ import { sql } from 'drizzle-orm';
 
 export async function initializeDatabase() {
   try {
-    console.log('Initializing database tables...');
-    
-    // Create UUID extension if it doesn't exist
-    await db.execute(sql`CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`);
-    
-    // Create loginpage table
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS Login (
-        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        username TEXT UNIQUE NOT NULL,
-        useremail TEXT UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    console.log('Using Drizzle for database management. Please run "npm run db:push" to update schema.');
 
-    // Create userpath table (fixed primary key issue)
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS UserPath (
-        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        UserName TEXT UNIQUE REFERENCES Login(username),
-        Path JSONB[] DEFAULT '{}'
-      )
-    `);
+    // Optional: Check connection
+    await db.execute(sql`SELECT 1`);
+    console.log('Database connection verified.');
 
-    // Create userpath table (fixed primary key issue)
-    await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS UserPolygon (
-        id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
-        UserName TEXT UNIQUE REFERENCES Login(username),
-        Polygon JSONB[] DEFAULT '{}'
-      )
-    `);
-
- 
-
-    
-    
-    console.log('Database tables initialized successfully!');
-    
- 
-    
-  } catch (error) { 
-    throw new Error(`Database initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } catch (error) {
+    throw new Error(`Database connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

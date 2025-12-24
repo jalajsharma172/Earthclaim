@@ -1,5 +1,5 @@
 
- 
+
 import { supabase } from "@shared/supabaseClient";
 
 export async function getPolygonJSON(username: string) {
@@ -7,15 +7,15 @@ export async function getPolygonJSON(username: string) {
 
     // table name is 'UserPolygons' 
     // Columns are id,UserName,Polygon.
-    if(!username){
-      return{
-        succes:false,
-        message: 'No UserName Found at DB'     
-    }
+    if (!username) {
+      return {
+        succes: false,
+        message: 'No UserName Found at DB'
+      }
     }
 
-    console.log("polygon fetching ffile : ",username);
-    
+    console.log("polygon fetching ffile : ", username);
+
 
     let { data: existingData, error } = await supabase
       .from('UserPolygon')
@@ -23,25 +23,52 @@ export async function getPolygonJSON(username: string) {
       .eq('UserName', username)
       .single();  // Added single() to get one record
 
-    
-  
- 
-    if (existingData) {  
-      return { 
-        success: true, 
-        message: 'Got polygons from Db', 
+
+
+
+    if (existingData) {
+      return {
+        success: true,
+        message: 'Got polygons from Db',
         data: existingData  // Access the Polygon property
 
-      };       
-    } else {      
-      return { 
-        success: false, 
-        message: 'No Polygons Exist', 
-        error: error 
+      };
+    } else {
+      return {
+        success: false,
+        message: 'No Polygons Exist',
+        error: error
       };
     }
   } catch (error) {
     // console.error('Error adding polygon:', error);
     return { error, success: false, message: 'Failed to save polygon' };
+  }
+}
+
+export async function getUserPolygonByWalletAddress(walletAddress: string) {
+
+  if (!walletAddress) {
+    console.error('Wallet address is required');
+    return [];
+  }
+
+  try {
+
+    const { data, error } = await supabase
+      .from('FreePolygons')
+      .select('coordinates')
+      .ilike('wallet', walletAddress.trim().toUpperCase());
+
+
+    if (error) {
+      console.error('Error fetching free polygons:', error);
+      return [];
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Exception fetching free polygons:', error);
+    return [];
   }
 }

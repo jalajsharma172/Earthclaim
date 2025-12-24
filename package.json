@@ -11,7 +11,9 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "check": "tsc",
+    "db:init": "drizzle-kit push",
     "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
     "netlify:dev": "npx netlify-cli dev --targetPort=5000 --port=8888 --no-open",
     "netlify:build": "npm run build"
   },
@@ -125,7 +127,7 @@
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
     "cross-env": "^10.0.0",
-    "drizzle-kit": "^0.18.1",
+    "drizzle-kit": "^0.30.0",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.17",

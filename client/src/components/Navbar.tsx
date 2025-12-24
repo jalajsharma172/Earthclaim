@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'wouter';
 import { ethers } from 'ethers';
@@ -44,12 +45,29 @@ const Navbar = ({ setNft, setMarketplace, setAccount, setUser }: NavbarProps) =>
   }, []);
 
   useEffect(() => {
-    if (activeAccount?.address) {
-      setAccount(activeAccount.address);
-      loadContracts();
-      // Generate random avatar URL using DiceBear API with the wallet address as seed
-      setAvatarUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeAccount.address}`);
-    }
+    const loginUser = async () => {
+      if (activeAccount?.address) {
+        setAccount(activeAccount.address);
+        loadContracts();
+        setAvatarUrl(`https://api.dicebear.com/7.x/avataaars/svg?seed=${activeAccount.address}`);
+
+        try {
+          // Call API to login/register user
+          const response = await axios.post('/api/auth/login', {
+            walletAddress: activeAccount.address
+          });
+
+          if (response.data.user && setUser) {
+            console.log("Logged in user:", response.data.user);
+            setUser(response.data.user);
+            BrowserStorageService.saveUserToStorage(response.data.user); // Persist login
+          }
+        } catch (error) {
+          console.error("Failed to login with wallet:", error);
+        }
+      }
+    };
+    loginUser();
   }, [activeAccount]);
 
   const loadContracts = async () => {
@@ -92,8 +110,8 @@ const Navbar = ({ setNft, setMarketplace, setAccount, setUser }: NavbarProps) =>
     return (
       <Link href={href}>
         <a className={`group flex items-center gap-2 px-4 py-2 relative transition-all duration-300 ${isActive
-            ? 'text-cyan-400 bg-cyan-950/20'
-            : 'text-gray-400 hover:text-cyan-300 hover:bg-white/5'
+          ? 'text-cyan-400 bg-cyan-950/20'
+          : 'text-gray-400 hover:text-cyan-300 hover:bg-white/5'
           }`}>
           {/* Active Indicator Line */}
           {isActive && (

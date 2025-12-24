@@ -27,34 +27,42 @@ export const BrowserStorageService = {
  * NOTE: Table name inferred as 'Users' or similar. 
  * Since schema is not fully visible, this is a provisional implementation.
  */
-export const SuprabaseStorageService = async (username: string, useremail: string) => {
-    // Check if user exists
-    const { data: existingUser, error: fetchError } = await supabase
-        .from('users') // Assuming table name is 'users'
-        .select('*')
-        .eq('email', useremail)
-        .single();
+export const SuprabaseStorageService = async (username?: string, useremail?: string, walletAddress?: string) => {
 
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "Row not found"
-        console.error("Supabase fetch error:", fetchError);
-        // Fallback: return simple object to allow login to proceed if DB fails
-        return { username, useremail, id: 'fallback-id' };
+    // 1. Determine query filter based on available inputs
+    let query = supabase.from('login').select('*');
+
+    if (walletAddress) {
+        query = query.eq('wallet_address', walletAddress);
+    } else if (useremail) {
+        query = query.eq('useremail', useremail);
+    } else {
+        console.error("No identity provided for login");
+        return { error: "No identity provided" };
     }
+
+    const { data: existingUser, error: fetchError } = await query.single();
+
+
 
     if (existingUser) {
         return existingUser;
     }
 
-    // Create new user
+    // 2. Create new user if not found
     const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert([{ username, email: useremail }])
+        .from('login')
+        .insert([{
+            username: username || (walletAddress ? `User-${walletAddress.slice(0, 6)}` : 'Unknown'),
+            useremail: useremail || null,
+            wallet_address: walletAddress || null
+        }])
         .select()
         .single();
 
     if (insertError) {
         console.error("Supabase insert error:", insertError);
-        return { username, useremail, id: 'fallback-new-id' };
+        return { username, useremail, walletAddress, id: 'fallback-id-insert-error' };
     }
 
     return newUser;

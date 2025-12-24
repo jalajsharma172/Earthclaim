@@ -24,13 +24,16 @@ interface DashboardProps {
   account: string | null;
 }
 
+import { useActiveAccount } from "thirdweb/react";
+
 export default function Dashboard({ account }: DashboardProps) {
   const navigate = useNavigate();
+  const activeAccount = useActiveAccount();
+  const [tokenCounter, setTokenCounter] = useState(0);
   const [userAddress, setUserAddress] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
   const [error, setError] = useState<string>("");
   const [transactionHash, setTransactionHash] = useState<string>("");
-  const [tokenCounter, setTokenCounter] = useState<number>(0);
   const [userNFTCount, setUserNFTCount] = useState<number>(0);
 
   const [userNFTData, setUserNFTData] = useState<UserNFTData[]>([]);
@@ -46,107 +49,38 @@ export default function Dashboard({ account }: DashboardProps) {
   const [mintingNFTs, setMintingNFTs] = useState<Set<string>>(new Set());
   const [isAnyMinting, setIsAnyMinting] = useState(false);
 
-  // Sync with Navbar account
   useEffect(() => {
-    if (account && account !== userAddress) {
-      const initSession = async () => {
+    const syncWallet = async () => {
+      if (activeAccount) {
+        setUserAddress(activeAccount.address);
+        setCurrentUsername(activeAccount.address);
+        setConnectionStatus("connected");
+
+        // Initialize provider/signer for existing ethers logic
         if (window.ethereum) {
           try {
-            setUserAddress(account);
-            setConnectionStatus("connected");
-            setCurrentUsername(account);
-
             const provider = new ethers.BrowserProvider(window.ethereum);
             const signer = await provider.getSigner();
             setProvider(provider);
             setSigner(signer);
-
-            fetechNFTs(account);
           } catch (e) {
-            console.error("Auto-connect failed in Dashboard", e);
-            setConnectionStatus("error");
+            console.error("Error initializing provider/signer:", e);
           }
         }
-      };
-      initSession();
-    } else if (!account && connectionStatus === 'connected') {
-      // Handle disconnect
-      resetConnection();
-    }
-  }, [account, userAddress, connectionStatus]);
 
-  const connectWallet = async () => {
-    if (typeof window.ethereum === "undefined") {
-      setConnectionStatus("error");
-      setError("MetaMask is not installed!");
-      return;
-    }
-
-    setConnectionStatus("connecting");
-    setError("");
-
-    try {
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts"
-      });
-
-      if (accounts.length > 0) {
-        await handleSuccessfulConnection(accounts[0]);
-      }
-    } catch (err: any) {
-      console.error("Error connecting wallet:", err);
-      setConnectionStatus("error");
-
-      if (err.code === 4001) {
-        setError("Connection rejected by user");
+        fetechNFTs(activeAccount.address);
       } else {
-        setError(err.message || "Failed to connect wallet");
+        setUserAddress("");
+        setCurrentUsername("");
+        setConnectionStatus("disconnected");
+        setProvider(null);
+        setSigner(null);
+        setNftData(null);
       }
-    }
-  };
+    };
 
-  const disconnectWallet = async () => {
-    try {
-      if (window.ethereum && window.ethereum.disconnect) await window.ethereum.disconnect();
-      if (window.ethereum && window.ethereum._providers) await window.ethereum._providers[0].disconnect();
-      if (window.ethereum && window.ethereum.request) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_revokePermissions",
-            params: [{ eth_accounts: {} }]
-          });
-        } catch (e) { }
-      }
-      resetConnection();
-      setConnectionStatus("disconnected");
-    } catch (err: any) {
-      console.error("Error in disconnect process:", err);
-      resetConnection();
-      setConnectionStatus("disconnected");
-    }
-  };
-
-  const handleSuccessfulConnection = async (address: string) => {
-    try {
-      setUserAddress(address);
-      setConnectionStatus("connected");
-      setError("");
-
-      const newProvider = new ethers.BrowserProvider(window.ethereum);
-      const newSigner = await newProvider.getSigner();
-
-      setProvider(newProvider);
-      setSigner(newSigner);
-
-      setCurrentUsername(address);
-      fetechNFTs(address);
-
-    } catch (err) {
-      console.error("Error in successful connection:", err);
-      setConnectionStatus("error");
-      setError("Failed to complete wallet connection");
-    }
-  };
+    syncWallet();
+  }, [activeAccount]);
 
   const mintNFTFromHash = async (nft: any) => {
     if (connectionStatus !== "connected" || !userAddress || !signer) {
@@ -243,9 +177,10 @@ export default function Dashboard({ account }: DashboardProps) {
   const fetechNFTs = async (username: string) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/get-nfts', { username });
+      const response = await axios.post('/api/freenfts', { username });
       if (response.data.success) {
-        setNftData(response.data.data.data.Polygon);
+        // console.log("Free NFTs: ", response.data.data.Polygon);
+        setNftData(response.data.data);
         setError('');
       } else {
         setError(response.data.message || 'Data Retrieval Failed');
@@ -347,25 +282,15 @@ export default function Dashboard({ account }: DashboardProps) {
                 </div>
 
                 {connectionStatus !== 'connected' ? (
-                  <button
-                    onClick={connectWallet}
-                    disabled={connectionStatus === 'connecting'}
-                    className="w-full py-4 bg-cyan-600/20 hover:bg-cyan-500/30 border border-cyan-500 text-cyan-300 font-mono text-sm tracking-wider uppercase transition-all hover:shadow-[0_0_15px_rgba(6,182,212,0.4)] disabled:opacity-50"
-                  >
-                    {connectionStatus === 'connecting' ? 'ESTABLISHING LINK...' : 'INITIALIZE CONNECTION'}
-                  </button>
+                  <div className="w-full py-4 text-center border border-cyan-500/30 text-cyan-500/50 font-mono text-xs uppercase">
+                    Connect via Navbar
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     <div className="p-4 bg-cyan-950/40 border-l-2 border-cyan-500">
                       <div className="text-[10px] text-cyan-400/60 font-mono mb-1">DESIGNATED OPERATOR</div>
                       <div className="font-mono text-cyan-100 text-sm tracking-wide">{formatAddress(userAddress)}</div>
                     </div>
-                    <button
-                      onClick={disconnectWallet}
-                      className="w-full py-2 bg-red-950/30 hover:bg-red-900/40 border border-red-800 text-red-400 font-mono text-xs uppercase"
-                    >
-                      Terminate Link
-                    </button>
                   </div>
                 )}
               </div>
@@ -427,9 +352,9 @@ export default function Dashboard({ account }: DashboardProps) {
                           <div>
                             <h3 className="font-bold text-cyan-100 font-mono text-lg">{item.Name || `SECTOR-${idx}`}</h3>
                             <div className="flex items-center gap-4 mt-1 text-xs font-mono text-cyan-400/60">
-                              <span>AREA: {Number(item.Area).toLocaleString()} m²</span>
+                              <span>AREA: {Number(item.Area || 0).toLocaleString()} m²</span>
                               <span className="hidden md:inline">|</span>
-                              <span className="truncate max-w-[200px]">HASH: {item.IPFShashcode}</span>
+                              <span className="truncate max-w-[200px]">HASH: {item.IPFShashcode || 'PENDING'}</span>
                             </div>
                           </div>
 
@@ -444,10 +369,10 @@ export default function Dashboard({ account }: DashboardProps) {
                             {!isMinted ? (
                               <button
                                 onClick={() => mintNFTFromHash(item)}
-                                disabled={isProcess}
+                                disabled={isProcess || !item.IPFShashcode}
                                 className={`px-6 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-[0_0_10px_rgba(0,0,0,0.5)] ${isProcess
                                   ? 'bg-yellow-600/20 text-yellow-500 border border-yellow-600/50 cursor-wait'
-                                  : 'bg-green-600 hover:bg-green-500 text-white border border-green-500'
+                                  : !item.IPFShashcode ? 'bg-gray-600/50 text-gray-400 border border-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 text-white border border-green-500'
                                   }`}
                               >
                                 {isProcess ? 'MINTING...' : 'CLAIM SECTOR'}

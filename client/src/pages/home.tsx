@@ -9,6 +9,9 @@ import MeteorShower from "../components/MeteorShower";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { thirdwebClient } from "../lib/thirdweb";
 
+import { BrowserStorageService } from "@shared/login";
+import { getUserEmail } from "thirdweb/wallets/in-app";
+
 export default function Home() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +26,40 @@ export default function Home() {
       audioRef.current.currentTime = 0;
       setIsMusicPlaying(false);
     }
+  }, [activeAccount]);
+
+  // Handle Thirdweb Login
+  useEffect(() => {
+    const performLogin = async () => {
+      if (activeAccount?.address) {
+        let email = "";
+        try {
+          // Attempt to fetch email from in-app wallet (Google, etc.)
+          email = await getUserEmail({ client: thirdwebClient });
+          console.log("Fetched email from Thirdweb:", email);
+        } catch (e) {
+          console.log("Could not fetch email or not an in-app wallet:", e);
+        }
+
+        try {
+          const response = await axios.post("/api/auth/login", {
+            walletAddress: activeAccount.address,
+            email: email || undefined,
+            // Use email as username if available, otherwise fallback or let server handle it
+            username: email ? email.split('@')[0] : undefined
+          });
+
+          if (response.data.user) {
+            console.log("Logged in user:", response.data.user);
+            await BrowserStorageService.saveUserToStorage(response.data.user);
+          }
+        } catch (error) {
+          console.error("Failed to login with wallet:", error);
+        }
+      }
+    };
+
+    performLogin();
   }, [activeAccount]);
 
   // Scroll and Meteor state

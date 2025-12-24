@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { getUserPathByUsername, savePolygon } from './map-helpers';
+import { useActiveAccount } from "thirdweb/react";
 // BrowserStorageService removed
 
 // Fix Leaflet icon issues
@@ -42,6 +43,7 @@ interface SimpleUserPolygon {
 }
 
 function MapView() {
+  const activeAccount = useActiveAccount();
   const navigate = useNavigate();
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
@@ -587,7 +589,9 @@ function MapView() {
               🌍 SHOW MAP
             </button>
             <button onClick={() => {
-              axios.get("/api/free-polygons").then(res => {
+              axios.get("/api/free-polygons", {
+                params: { walletaddress: activeAccount?.address }
+              }).then(res => {
                 if (res.data && Array.isArray(res.data)) {
                   setFreePolygons(res.data);
                   setFreeMode(true);
@@ -943,7 +947,7 @@ function MapView() {
                   // 3. Send to server
                   axios.post("/api/save-generated-polygon", {
                     ip: userIp,
-                    wallet: "0x1234...abcd", // Placeholder as requested
+                    wallet: activeAccount?.address || "0x0000000000000000000000000000000000000000",
                     coordinates: currentPoly.coordinates
                   }).then(res => {
                     console.log("Polygon saved:", res.data);
