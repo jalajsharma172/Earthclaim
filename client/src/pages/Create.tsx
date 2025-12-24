@@ -3,19 +3,20 @@ import { Contract, ethers } from 'ethers';
 import { useLocation, useRoute } from "wouter";
 import Marketabi from '../contractsData/Marketplace.json';
 import MarketplaceAddress from '../contractsData/Marketplace-address.json';
-const VITE_MARKETPLACE_CONTRACT_ADDRESS = import.meta.env.VITE_MARKETPLACE_CONTRACT_ADDRESS ;
-const VITE_CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS ;
+const VITE_MARKETPLACE_CONTRACT_ADDRESS = import.meta.env.VITE_MARKETPLACE_CONTRACT_ADDRESS;
+const VITE_CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
 
 // Resolve marketplace address: prefer env var, fallback to the compiled address file
 const MARKETPLACE_ADDRESS = VITE_MARKETPLACE_CONTRACT_ADDRESS || MarketplaceAddress.address;
 import { set } from 'date-fns';
-import {abi} from '../contractsData/NFT.json';
+import { abi } from '../contractsData/NFT.json';
 interface CreateProps {
   marketplace: any
   nft: any
+  account: string | null
 }
 
-const Create = ({ marketplace, nft }: CreateProps) => {
+const Create = ({ marketplace, nft, account }: CreateProps) => {
   const [price, setPrice] = useState<string>('')
   const [tokenId, setTokenID] = useState<string>('')
   // IMPORTANT: default to your NFT contract address, not the marketplace
@@ -32,47 +33,79 @@ const Create = ({ marketplace, nft }: CreateProps) => {
   const [signer, setSigner] = useState<ethers.Signer | null>(null)
   const [isConnecting, setIsConnecting] = useState(false)
 
-useEffect(() => {
-  if (signer) {
-    const marketplace_contract = new ethers.Contract(
-      MARKETPLACE_ADDRESS,
-      Marketabi.abi,
-      signer
-    );
-    _setMarketplace(marketplace_contract);
-  }
-}, [signer]);
-  
+  // Sync with Navbar account
+  useEffect(() => {
+    if (account && account !== walletAddress) {
+      const initSigner = async () => {
+        if (window.ethereum) {
+          try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            setProvider(provider);
+            setSigner(signer);
+            setWalletAddress(account);
+            console.log("Auto-connected via Navbar:", account);
+
+            // Initialize marketplace contract if not already done
+            try {
+              const marketplace_contract = new ethers.Contract(
+                MARKETPLACE_ADDRESS,
+                Marketabi.abi,
+                signer
+              );
+              _setMarketplace(marketplace_contract);
+            } catch (e) { console.error("Error init marketplace", e); }
+
+          } catch (e) {
+            console.error("Failed to get signer from existing connection", e);
+          }
+        }
+      };
+      initSigner();
+    }
+  }, [account, walletAddress]);
+
+  useEffect(() => {
+    if (signer) {
+      const marketplace_contract = new ethers.Contract(
+        MARKETPLACE_ADDRESS,
+        Marketabi.abi,
+        signer
+      );
+      _setMarketplace(marketplace_contract);
+    }
+  }, [signer]);
+
   // Wallet connection function
   const connectWallet = async () => {
     if (typeof window.ethereum !== 'undefined') {
       try {
         setIsConnecting(true)
         setError(null)
-          const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-          console.log("Signer is ",signer);
-          
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        console.log("Signer is ", signer);
+
         setWalletAddress(accounts[0]);
         setSigner(signer);
         setProvider(provider);
-          console.log("Wallet connected:", accounts[0])
-        
+        console.log("Wallet connected:", accounts[0])
+
         console.log("Wallet initialized:", accounts[0]);
-        try{
+        try {
           const marketplace_contract = new ethers.Contract(
             MARKETPLACE_ADDRESS,
             Marketabi.abi,
             signer
           );
-        _setMarketplace(marketplace_contract);
-        }catch(err){
+          _setMarketplace(marketplace_contract);
+        } catch (err) {
           console.error("Error setting marketplace contract:", err);
         }
 
 
-    
+
       } catch (error) {
         console.error('User denied account access:', error)
         setError('Failed to connect wallet')
@@ -93,7 +126,7 @@ useEffect(() => {
       '0x08c379a0': 'Error(string) - Generic revert with reason',
       '0xdfc0338d': 'ERC721: invalid token ID',
     }
-    
+
     const selector = errorData.slice(0, 10)
     return errorSignatures[selector as keyof typeof errorSignatures] || `Contract error: ${selector}`
   }
@@ -143,28 +176,28 @@ useEffect(() => {
       setError('Marketplace signer is not loaded')
       return
     }
-    
 
-      // Create a fresh contract instance with the current signer
-      const marketplace_contract = new ethers.Contract(
-        MARKETPLACE_ADDRESS,
-        Marketabi.abi,
-        signer
-      );
 
-      // Log contract details for debugging
-      console.log("Contract setup:", {
-        address: MARKETPLACE_ADDRESS,
-        hasAbi: !!Marketabi.abi,
-        methods: Object.keys(marketplace_contract.interface.fragments),
-        signer: !!signer
-      });
+    // Create a fresh contract instance with the current signer
+    const marketplace_contract = new ethers.Contract(
+      MARKETPLACE_ADDRESS,
+      Marketabi.abi,
+      signer
+    );
 
-      // Validate contract setup
-      if (!marketplace_contract.runner) {
-        throw new Error("Contract not properly initialized with signer");
-      }    // First, ensure wallet is connected
- 
+    // Log contract details for debugging
+    console.log("Contract setup:", {
+      address: MARKETPLACE_ADDRESS,
+      hasAbi: !!Marketabi.abi,
+      methods: Object.keys(marketplace_contract.interface.fragments),
+      signer: !!signer
+    });
+
+    // Validate contract setup
+    if (!marketplace_contract.runner) {
+      throw new Error("Contract not properly initialized with signer");
+    }    // First, ensure wallet is connected
+
 
 
     if (!marketplace_contract) {
@@ -177,18 +210,18 @@ useEffect(() => {
     setMessage('Starting listing process...')
 
     try {
-    console.log("=== DEBUG INFO ===")
-    console.log("Marketplace Contract:", await marketplace_contract.getAddress())
+      console.log("=== DEBUG INFO ===")
+      console.log("Marketplace Contract:", await marketplace_contract.getAddress())
       console.log("Token Address:", tokenaddress)
       console.log("Token ID:", tokenId)
       console.log("Price (ETH):", price)
-  console.log("Signer Address:", walletAddress)
+      console.log("Signer Address:", walletAddress)
       console.log("=================")
 
       // Step 1: Check if token exists and user is owner
       setMessage('Checking token ownership...')
       console.log("Checking token ownership...")
-      
+
       try {
         // Create NFT contract instance for the provided NFT address
         const nftContract = new ethers.Contract(
@@ -266,7 +299,7 @@ useEffect(() => {
       // Step 4: Execute the listing
       setMessage('Creating listing transaction...')
       console.log("Creating listing...")
-      
+
       const listingPrice = ethers.parseEther(price.toString())
 
       // Guard: ensure function exists on the contract
@@ -285,15 +318,15 @@ useEffect(() => {
         listingPrice
       );
       console.log("✅ Transaction sent:", tx.hash);
-      setMessage('Transaction sent — waiting for confirmation...');      const receipt = await tx.wait()
+      setMessage('Transaction sent — waiting for confirmation...'); const receipt = await tx.wait()
       console.log("✅ Transaction confirmed:", receipt)
 
       if (receipt.status === 1) {
         setMessage('🎉 NFT listed successfully!')
         console.log("✅ NFT listed successfully!")
-        
-    // Reset form (default back to NFT contract address)
-    setTokenAddress(VITE_CONTRACT_ADDRESS || '')
+
+        // Reset form (default back to NFT contract address)
+        setTokenAddress(VITE_CONTRACT_ADDRESS || '')
         setTokenID('')
         setPrice('')
       } else {
@@ -302,16 +335,16 @@ useEffect(() => {
 
     } catch (err: any) {
       console.error('❌ Error listing NFT:', err)
-      
+
       // Enhanced error handling
       if (err.data) {
         const errorReason = decodeError(err.data)
         console.log("Decoded error reason:", errorReason)
         setError(`Smart contract error: ${errorReason}`)
-      } 
+      }
       else if (err.code === "ACTION_REJECTED") {
         setError('Transaction was rejected by user')
-      } 
+      }
       else if (err.code === "INSUFFICIENT_FUNDS") {
         setError('Insufficient funds for transaction')
       }
@@ -356,8 +389,8 @@ useEffect(() => {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-semibold text-blue-300 font-mono">
-                  {isConnecting ? "🔄 Connecting Wallet..." : 
-                   signer ? "✅ Wallet Connected" : "⚠️ Connect Wallet to List NFT"}
+                  {isConnecting ? "🔄 Connecting Wallet..." :
+                    signer ? "✅ Wallet Connected" : "⚠️ Connect Wallet to List NFT"}
                 </h3>
                 {walletAddress && (
                   <p className="text-blue-200 text-sm font-mono mt-1">
@@ -393,7 +426,7 @@ useEffect(() => {
                 </div>
               </div>
             )}
-            
+
             {error && (
               <div className="mb-6 p-4 bg-red-900 bg-opacity-50 border border-red-400 rounded text-red-300 font-mono">
                 <div className="flex items-center">
@@ -477,7 +510,7 @@ useEffect(() => {
                   <span className="mr-2">🗑️</span>
                   CLEAR FIELDS
                 </button>
-                
+
                 <button
                   type="submit"
                   // disabled={isLoading || !signer}

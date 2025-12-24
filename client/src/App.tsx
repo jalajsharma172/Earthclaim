@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query"; 
+import { QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ethers } from 'ethers';
+import { ThirdwebProvider } from "thirdweb/react";
 import Navbar from "./components/Navbar";
 
 import Leaderboard from "./components/Leaderboard";
@@ -25,63 +26,65 @@ function App() {
   const [user, setUser] = useState<any | null>(null);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-gray-900">
-          <Switch>
-            <Route path="/">
-              <Home />
-            </Route>
-            <Route>
-              {/* All other pages with navbar and container */}
-              <div>
-                <Navbar 
-                  setNft={setNft}
-                  setMarketplace={setMarketplace}
-                  setAccount={setAccount}
-                  setUser={setUser}
-                />
-                <main className="container mx-auto px-4 py-8">
-                  <Switch>
-                    <Route path="/map">
-                      <MapView />
-                    </Route>
-                    <Route path="/leaderboard">
-                      <Leaderboard />
-                    </Route>
-                    <Route path="/dashboard">
-                      <Dashboard />
-                    </Route>
-                    <Route path="/earnbywalk">
-                      <Rewards />
-                    </Route>
-                    <Route path="/view-polygon">
-                      <NFTPolygonViewer />
-                    </Route>
-                    <Route path="/token-info/:ipfsHash">
-                      <TokenInfoViewer nft={nft}  />
-                    </Route>
-                    <Route path="/marketplace">
-                      <Marketplace marketplace={marketplace} nft={nft} />
-                    </Route>
-                    <Route path="/create">
-                      <Create marketplace={marketplace} nft={nft} />
-                    </Route>
-                    <Route path="/request">
-                      <Request marketplace={marketplace} nft={nft} />
-                    </Route>
-                    
-                    <Route>
-                      <NotFound />
-                    </Route>
-                  </Switch>
-                </main>
-              </div>
-            </Route>
-          </Switch>
-        </div>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ThirdwebProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <div className="min-h-screen bg-gray-900">
+            <Switch>
+              <Route path="/">
+                <Home />
+              </Route>
+              <Route path="/map">
+                <MapView />
+              </Route>
+              <Route>
+                {/* All other pages with navbar and container */}
+                <div>
+                  <Navbar
+                    setNft={setNft}
+                    setMarketplace={setMarketplace}
+                    setAccount={setAccount}
+                    setUser={setUser}
+                  />
+                  <main className="container mx-auto px-4 py-8">
+                    <Switch>
+                      <Route path="/leaderboard">
+                        <Leaderboard />
+                      </Route>
+                      <Route path="/dashboard">
+                        <Dashboard account={account} />
+                      </Route>
+                      <Route path="/earnbywalk">
+                        <Rewards />
+                      </Route>
+                      <Route path="/view-polygon">
+                        <NFTPolygonViewer />
+                      </Route>
+                      <Route path="/token-info/:ipfsHash">
+                        <TokenInfoViewer nft={nft} />
+                      </Route>
+                      <Route path="/marketplace">
+                        <Marketplace marketplace={marketplace} nft={nft} />
+                      </Route>
+                      <Route path="/create">
+                        <Create marketplace={marketplace} nft={nft} account={account} />
+                      </Route>
+                      <Route path="/request">
+                        <Request marketplace={marketplace} nft={nft} />
+                      </Route>
+
+                      <Route>
+                        <NotFound />
+                      </Route>
+                    </Switch>
+                  </main>
+                </div>
+              </Route>
+            </Switch>
+          </div>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThirdwebProvider>
   );
 }
 

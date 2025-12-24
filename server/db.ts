@@ -16,10 +16,11 @@ if (!connectionString) {
 // Create PostgreSQL connection pool for Supabase
 const pool = new Pool({
   connectionString,
-  ssl: { rejectUnauthorized: false }, // Required for Supabase
-  max: 10, // Adjust based on your Supabase plan
+  ssl: { rejectUnauthorized: false },
+  family: 4, // 👈 FORCE IPv4
+  max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 20000,
 });
 
 // Initialize Drizzle ORM with the connection pool
@@ -31,10 +32,12 @@ export { pool };
 // Database connection test function
 export async function testConnection() {
   try {
+    console.log("DATABASE_URL:", connectionString);
+
     const client = await pool.connect();
-    const result = await client.query('SELECT version()');
+    // const result = await client.query('SELECT version()');
     console.log('✅ Supabase connected successfully');
-    console.log('Database version:', result.rows[0].version);
+    // console.log('Database version:', result.rows[0].version);
     client.release();
     return true;
   } catch (error) {

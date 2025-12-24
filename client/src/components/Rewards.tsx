@@ -165,9 +165,9 @@ export default function Rewards() {
     } catch (error) {
       console.error("Error retrieving username from localStorage:", error);
     }
-    
-    console.log("No username found in localStorage, using 'Anonymous'");
-    return "Anonymous";
+
+    // console.log("No username found in localStorage, using 'Anonymous'");
+    return "Guest"; // Default to Guest to allow access
   };
 
   const currentUsername = getCurrentUser();
@@ -177,8 +177,8 @@ export default function Rewards() {
   }, []);
 
   const loadUserData = async () => {
-    if (currentUsername === "Anonymous") return;
-    
+    // if (currentUsername === "Anonymous") return; // Removed check
+
     setLoading(true);
     try {
       // Load user's actual NFT data from existing API (same as Dashboard)
@@ -187,7 +187,7 @@ export default function Rewards() {
         const data = await response.json();
         console.log("Fetched NFTs for rewards:", data.userNFTs);
         setUserNFTData(data.userNFTs);
-        
+
         // Count NFTs that are minted and not used for rewards
         const availableNFTs = data.userNFTs.filter((nft: any) => nft.minted === 1 && !nft.usedForReward);
         setUserNFTCount(availableNFTs.length);
@@ -198,7 +198,7 @@ export default function Rewards() {
         setUserNFTCount(3);
         setUserNFTData([]);
       }
-      
+
       setUserRewards([]);
       setOffers(mockOffers);
     } catch (error) {
@@ -235,13 +235,13 @@ export default function Rewards() {
   };
 
   const handleClaimReward = async (offer: Offer) => {
-    if (currentUsername === "Anonymous") {
-      setError("Please login to claim rewards");
-      return;
-    }
+    // if (currentUsername === "Anonymous") {
+    //   setError("Please login to claim rewards");
+    //   return;
+    // }
 
     const availableNFTs = userNFTData.filter(nft => nft.minted === 1 && !nft.usedForReward);
-    
+
     if (availableNFTs.length < offer.requirements) {
       setError(`You need at least ${offer.requirements} NFTs to claim this reward. You currently have ${availableNFTs.length} available NFTs.`);
       return;
@@ -254,7 +254,7 @@ export default function Rewards() {
     try {
       // Simulate claiming process
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       const newReward: UserReward = {
         id: Date.now().toString(),
         userId: currentUsername,
@@ -263,10 +263,10 @@ export default function Rewards() {
         status: 'completed',
         createdAt: new Date().toISOString()
       };
-      
+
       setUserRewards((prev: UserReward[]) => [...prev, newReward]);
       setSuccess(`Successfully claimed ${formatPoints(offer.pointsValue)} points from ${offer.title}!`);
-      
+
       // Update NFT data (mark NFTs as used for reward)
       const nftsToUse = availableNFTs.slice(0, offer.requirements);
       const updatedNFTData = userNFTData.map(nft => {
@@ -275,10 +275,10 @@ export default function Rewards() {
         }
         return nft;
       });
-      
+
       setUserNFTData(updatedNFTData);
       setUserNFTCount((prev: number) => Math.max(0, prev - offer.requirements));
-      
+
     } catch (error) {
       console.error("Error claiming reward:", error);
       setError("Failed to claim reward. Please try again.");
@@ -291,27 +291,8 @@ export default function Rewards() {
     return userNFTCount >= offer.requirements && offer.available;
   };
 
-  if (currentUsername === "Anonymous") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
-        <div className="max-w-4xl mx-auto pt-8">
-          <Card className="text-center p-8">
-            <CardHeader>
-              <CardTitle className="text-2xl text-gray-800">Login Required</CardTitle>
-              <CardDescription>
-                Please login to access the rewards system and start earning from your NFTs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="bg-purple-600 hover:bg-purple-700">
-                <a href="/">Go to Login</a>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Removed Login Required Screen
+  // if (currentUsername === "Anonymous") { ... }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-4">
@@ -324,7 +305,7 @@ export default function Rewards() {
           <p className="text-purple-600 text-lg">
             Convert your NFTs into valuable rewards and earn points
           </p>
-          
+
           {/* User Stats */}
           <div className="mt-6 bg-white rounded-2xl p-6 shadow-lg inline-block">
             <div className="flex items-center gap-6">
@@ -354,7 +335,7 @@ export default function Rewards() {
             <AlertDescription className="text-red-700">{error}</AlertDescription>
           </Alert>
         )}
-        
+
         {success && (
           <Alert className="mb-6 border-green-200 bg-green-50">
             <AlertDescription className="text-green-700">{success}</AlertDescription>
@@ -362,35 +343,36 @@ export default function Rewards() {
         )}
 
         {/* User's Available NFTs Section */}
-        {currentUsername !== "Anonymous" && userNFTData.length > 0 && (
+        {/* Removed check: currentUsername !== "Anonymous" */}
+        {userNFTData.length > 0 && (
           <div className="mb-8 bg-white rounded-3xl shadow-xl p-6 border border-purple-200">
             <h2 className="text-2xl font-bold text-purple-800 mb-4">Your Available NFTs</h2>
             <p className="text-purple-600 mb-4">These NFTs can be used to claim rewards</p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {userNFTData
                 .filter(nft => nft.minted === 1 && !nft.usedForReward)
                 .map((nft, idx) => (
-                <div 
-                  key={nft.id} 
-                  className="bg-purple-50 rounded-xl p-4 border border-purple-200 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="font-semibold text-purple-800">Land NFT #{idx + 1}</div>
-                    <Badge className="bg-green-100 text-green-800">
-                      Available
-                    </Badge>
+                  <div
+                    key={nft.id}
+                    className="bg-purple-50 rounded-xl p-4 border border-purple-200 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="font-semibold text-purple-800">Land NFT #{idx + 1}</div>
+                      <Badge className="bg-green-100 text-green-800">
+                        Available
+                      </Badge>
+                    </div>
+                    <div className="text-xs text-gray-500 font-mono break-all">
+                      Hash: {nft.hashjson.length > 30 ? `${nft.hashjson.substring(0, 30)}...` : nft.hashjson}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Created: {new Date(nft.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 font-mono break-all">
-                    Hash: {nft.hashjson.length > 30 ? `${nft.hashjson.substring(0, 30)}...` : nft.hashjson}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    Created: {new Date(nft.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
-            
+
             {userNFTData.filter(nft => nft.minted === 1 && !nft.usedForReward).length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <p>No available NFTs for rewards</p>
@@ -403,11 +385,10 @@ export default function Rewards() {
         {/* Offers Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {offers.map((offer) => (
-            <Card 
-              key={offer.id} 
-              className={`relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl ${
-                offer.featured ? 'ring-2 ring-purple-400 ring-opacity-50' : ''
-              } ${!canClaimOffer(offer) ? 'opacity-60' : ''}`}
+            <Card
+              key={offer.id}
+              className={`relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-xl ${offer.featured ? 'ring-2 ring-purple-400 ring-opacity-50' : ''
+                } ${!canClaimOffer(offer) ? 'opacity-60' : ''}`}
             >
               {offer.featured && (
                 <div className="absolute top-2 right-2">
@@ -416,7 +397,7 @@ export default function Rewards() {
                   </Badge>
                 </div>
               )}
-              
+
               <CardHeader className={`${offer.color} text-white relative`}>
                 <div className="flex items-center justify-between">
                   <div className="text-3xl">{offer.icon}</div>
@@ -430,10 +411,10 @@ export default function Rewards() {
                   {offer.provider}
                 </CardDescription>
               </CardHeader>
-              
+
               <CardContent className="p-6">
                 <p className="text-gray-600 text-sm mb-4">{offer.description}</p>
-                
+
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Reward:</span>
@@ -441,14 +422,14 @@ export default function Rewards() {
                       +{formatPoints(offer.pointsValue)} points
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500">Required NFTs:</span>
                     <span className="font-semibold text-purple-600">
                       {offer.requirements} NFT{offer.requirements > 1 ? 's' : ''}
                     </span>
                   </div>
-                  
+
                   {offer.estimatedTime && (
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Time:</span>
@@ -459,15 +440,14 @@ export default function Rewards() {
                     </div>
                   )}
                 </div>
-                
+
                 <Button
                   onClick={() => handleClaimReward(offer)}
                   disabled={!canClaimOffer(offer) || selectedOffer === offer.id}
-                  className={`w-full mt-4 ${
-                    canClaimOffer(offer)
+                  className={`w-full mt-4 ${canClaimOffer(offer)
                       ? 'bg-purple-600 hover:bg-purple-700'
                       : 'bg-gray-400 cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   {selectedOffer === offer.id ? (
                     <div className="flex items-center gap-2">
@@ -475,9 +455,9 @@ export default function Rewards() {
                       Processing...
                     </div>
                   ) : !canClaimOffer(offer) ? (
-                    userNFTCount < offer.requirements ? 
-                    `Need ${offer.requirements - userNFTCount} more NFT${offer.requirements - userNFTCount > 1 ? 's' : ''}` :
-                    'Unavailable'
+                    userNFTCount < offer.requirements ?
+                      `Need ${offer.requirements - userNFTCount} more NFT${offer.requirements - userNFTCount > 1 ? 's' : ''}` :
+                      'Unavailable'
                   ) : (
                     'Claim Reward'
                   )}

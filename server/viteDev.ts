@@ -1,4 +1,4 @@
- 
+
 import type { Express } from "express";
 import fs from "fs";
 import path from "path";
@@ -27,8 +27,9 @@ export async function setupViteDev(app: Express, server: Server) {
       ...viteLogger,
       error: (msg: string, options?: any) => {
         viteLogger.error(msg, options);
+        viteLogger.error(msg, options);
         // make dev failures loud
-        process.exit(1);
+        // process.exit(1);
       },
     },
     server: serverOptions,
@@ -67,4 +68,3 @@ export async function setupViteDev(app: Express, server: Server) {
     }
   });
 }
-// >>>>>>> 19e52aa7ffe4b48b2865e00fc0378e2f8d1b1c20

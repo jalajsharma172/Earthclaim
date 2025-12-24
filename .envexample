@@ -23,4 +23,7 @@ VITE_PROVIDER=
 # kwala contract
 VITE_CONTRACT_ADDRESS= 
 
+# Thirdweb client ID - Get from: https://thirdweb.com/dashboard/settings/api-keys
+VITE_THIRDWEB_CLIENT_ID=
+
  
