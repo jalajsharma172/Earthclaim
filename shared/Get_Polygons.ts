@@ -2,35 +2,29 @@
 
 import { supabase } from "@shared/supabaseClient";
 
-export async function getPolygonJSON(username: string) {
+export async function getFreePolygonsFromWalletAddress(walletAddress: string) {
   try {
 
-    // table name is 'UserPolygons' 
-    // Columns are id,UserName,Polygon.
-    if (!username) {
+    if (!walletAddress) {
       return {
-        succes: false,
-        message: 'No UserName Found at DB'
+        success: false,
+        message: 'No walletAddress Found at DB'
       }
     }
 
-    console.log("polygon fetching ffile : ", username);
+    console.log("polygon fetching ffile : ", walletAddress);
 
 
-    let { data: existingData, error } = await supabase
-      .from('UserPolygon')
-      .select('Polygon')  // Fixed: added quotes around column name
-      .eq('UserName', username)
-      .single();  // Added single() to get one record
+    let { data: FreePolygons, error } = await supabase
+      .from('FreePolygons')
+      .select('*')
+      .eq('wallet', walletAddress);
 
-
-
-
-    if (existingData) {
+    if (FreePolygons) {
       return {
         success: true,
         message: 'Got polygons from Db',
-        data: existingData  // Access the Polygon property
+        data: FreePolygons
 
       };
     } else {
@@ -46,29 +40,49 @@ export async function getPolygonJSON(username: string) {
   }
 }
 
-export async function getUserPolygonByWalletAddress(walletAddress: string) {
-
-  if (!walletAddress) {
-    console.error('Wallet address is required');
-    return [];
-  }
+export async function getFreePolygon() {
 
   try {
 
     const { data, error } = await supabase
-      .from('FreePolygons')
-      .select('coordinates')
-      .ilike('wallet', walletAddress.trim().toUpperCase());
+      .from('AviableFreePolygons')
+      .select('*');
 
 
     if (error) {
-      console.error('Error fetching free polygons:', error);
+      console.log('Error fetching free polygons:', error);
       return [];
     }
 
     return data;
   } catch (error) {
-    console.error('Exception fetching free polygons:', error);
+    console.log('Exception fetching free polygons:', error);
+    return [];
+  }
+}
+
+
+
+export async function SaveFreePolygon(wallet: string, ip: string, coordinates: string[], name: string) {
+
+  try {
+
+    const { data, error } = await supabase
+      .from('FreePolygons')
+      .insert([
+        { wallet: wallet, ip: ip, coordinates: coordinates, Name: name }
+      ])
+      .select()
+
+
+    if (error) {
+      console.log('Error fetching free polygons:', error);
+      return [];
+    }
+
+    return data;
+  } catch (error) {
+    console.log('Exception fetching free polygons:', error);
     return [];
   }
 }

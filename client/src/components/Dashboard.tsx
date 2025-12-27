@@ -49,6 +49,11 @@ export default function Dashboard({ account }: DashboardProps) {
   const [mintingNFTs, setMintingNFTs] = useState<Set<string>>(new Set());
   const [isAnyMinting, setIsAnyMinting] = useState(false);
 
+  // Mint Modal State
+  const [showMintModal, setShowMintModal] = useState(false);
+  const [selectedNft, setSelectedNft] = useState<any | null>(null);
+  const [nftImage, setNftImage] = useState<File | null>(null);
+
   useEffect(() => {
     const syncWallet = async () => {
       if (activeAccount) {
@@ -151,6 +156,28 @@ export default function Dashboard({ account }: DashboardProps) {
     }
   };
 
+  const handleMintClick = (nft: any) => {
+    setSelectedNft(nft);
+    setShowMintModal(true);
+    setNftImage(null);
+  };
+
+  const handleModalClose = () => {
+    setShowMintModal(false);
+    setSelectedNft(null);
+    setNftImage(null);
+  };
+
+  const handleModalSubmit = () => {
+    if (!selectedNft) return;
+
+    // In a real implementation with blockchain, we would likely specific logic here
+    // For now, we proceed to call the existing mint function
+    console.log("Proceeding to mint with image:", nftImage);
+    mintNFTFromHash(selectedNft);
+    handleModalClose();
+  };
+
   const isMinting = (ipfsHash: string): boolean => {
     return mintingNFTs.has(ipfsHash);
   };
@@ -173,13 +200,12 @@ export default function Dashboard({ account }: DashboardProps) {
   const formatAddress = (address: string): string => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
-
-  const fetechNFTs = async (username: string) => {
+  //Free NFTs
+  const fetechNFTs = async (walletAddress: string) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/freenfts', { username });
+      const response = await axios.post('/api/freenfts', { walletAddress: walletAddress });
       if (response.data.success) {
-        // console.log("Free NFTs: ", response.data.data.Polygon);
         setNftData(response.data.data);
         setError('');
       } else {
@@ -360,7 +386,13 @@ export default function Dashboard({ account }: DashboardProps) {
 
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={() => navigate('/view-polygon', { state: { ipfsHash: item.IPFShashcode } })}
+                              onClick={() => navigate('/view-polygon', {
+                                state: {
+                                  ipfsHash: item.IPFShashcode,
+                                  coordinates: item.coordinates,
+                                  name: item.Name
+                                }
+                              })}
                               className="px-4 py-2 bg-cyan-900/30 hover:bg-cyan-800/50 text-cyan-300 border border-cyan-700/50 rounded text-xs font-mono uppercase tracking-wider transition-colors"
                             >
                               View Map
@@ -368,11 +400,11 @@ export default function Dashboard({ account }: DashboardProps) {
 
                             {!isMinted ? (
                               <button
-                                onClick={() => mintNFTFromHash(item)}
-                                disabled={isProcess || !item.IPFShashcode}
+                                onClick={() => handleMintClick(item)}
+                                disabled={isProcess}
                                 className={`px-6 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-[0_0_10px_rgba(0,0,0,0.5)] ${isProcess
                                   ? 'bg-yellow-600/20 text-yellow-500 border border-yellow-600/50 cursor-wait'
-                                  : !item.IPFShashcode ? 'bg-gray-600/50 text-gray-400 border border-gray-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-500 text-white border border-green-500'
+                                  : 'bg-green-600 hover:bg-green-500 text-white border border-green-500'
                                   }`}
                               >
                                 {isProcess ? 'MINTING...' : 'CLAIM SECTOR'}
@@ -403,6 +435,56 @@ export default function Dashboard({ account }: DashboardProps) {
               <Zap size={14} /> Transmission Complete
             </div>
             <div className="truncate opacity-80">HASH: {transactionHash}</div>
+          </div>
+        )}
+
+        {/* Mint Modal */}
+        {showMintModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-cyan-500/30 rounded-lg p-6 max-w-md w-full shadow-[0_0_50px_rgba(6,182,212,0.2)]">
+              <h3 className="text-xl font-mono font-bold text-cyan-400 mb-4">CLAIM SECTOR</h3>
+
+              <div className="mb-4">
+                <p className="text-sm text-cyan-300/70 mb-2 font-mono">SECTOR ID: {selectedNft?.Name || "UNKNOWN"}</p>
+                <p className="text-xs text-cyan-500/50 mb-4 break-all">{selectedNft?.IPFShashcode}</p>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-mono text-cyan-100 mb-2">UPLOAD SURVEY IMAGE</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNftImage(e.target.files ? e.target.files[0] : null)}
+                  className="w-full text-xs text-cyan-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-900/30 file:text-cyan-400 hover:file:bg-cyan-900/50 cursor-pointer border border-cyan-900 rounded p-2 bg-black/50"
+                />
+
+                {nftImage && (
+                  <div className="mt-4 p-2 border border-cyan-500/30 rounded bg-black/40 text-center">
+                    <p className="text-[10px] text-cyan-400 mb-2 font-mono uppercase tracking-widest">Preview</p>
+                    <img
+                      src={URL.createObjectURL(nftImage)}
+                      alt="Survey Preview"
+                      className="max-h-48 mx-auto rounded border border-cyan-900/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 justify-end">
+                <button
+                  onClick={handleModalClose}
+                  className="px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleModalSubmit}
+                  className="px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                >
+                  Create NFT
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

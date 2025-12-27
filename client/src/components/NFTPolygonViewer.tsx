@@ -11,6 +11,8 @@ interface PathPoint {
 
 interface LocationState {
   ipfsHash: string;
+  coordinates?: any[];
+  name?: string;
 }
 
 const NFTPolygonViewer = () => {
@@ -20,7 +22,8 @@ const NFTPolygonViewer = () => {
   const polygonRef = useRef<L.Polygon | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>(""); 
+  const [error, setError] = useState<string>("");
+  const [title, setTitle] = useState<string>("");
 
   // Initialize map on component mount
   useEffect(() => {
@@ -42,10 +45,13 @@ const NFTPolygonViewer = () => {
   // Handle polygon display whenever location state changes
   useEffect(() => {
     const state = location.state as LocationState;
+    if (state?.name) setTitle(state.name);
 
     const displayPolygon = async () => {
-      if (!state?.ipfsHash || !mapRef.current) {
-        setError("No IPFS hash provided or map not initialized");
+      if (!mapRef.current) return;
+
+      if (!state?.ipfsHash && !state?.coordinates) {
+        setError("No IPFS hash or coordinates provided");
         return;
       }
 
@@ -53,31 +59,45 @@ const NFTPolygonViewer = () => {
       setError("");
 
       try {
-        // Fetch text file from IPFS
-        const response = await axios.get(`https://ipfs.io/ipfs/${state.ipfsHash}`, {
-          responseType: "text" // Ensure we get raw text
-        });
-
-        // Parse JSON from text
         let coordinates: PathPoint[] = [];
-        let valid = false;
-        try {
-          coordinates = JSON.parse(response.data);
-          valid = Array.isArray(coordinates) &&
-                  coordinates.length > 2 &&
-                  coordinates.every(point =>
-                    typeof point.lat === 'number' &&
-                    typeof point.lon === 'number'
-                  );
-        if(valid){  
-            console.log(coordinates);
-        }else{
-            console.log(coordinates);
+
+        if (state.coordinates && Array.isArray(state.coordinates) && state.coordinates.length > 0) {
+          // Handle direct coordinates (likely [lon, lat] arrays)
+          console.log("Using direct coordinates:", state.coordinates);
+
+          // Check format
+          const firstPoint = state.coordinates[0];
+          if (Array.isArray(firstPoint)) {
+            // Assume [lon, lat] from standard GeoJSON/DB
+            coordinates = state.coordinates.map(p => ({
+              lat: p[1],
+              lon: p[0]
+            }));
+          } else if (typeof firstPoint === 'object' && 'lat' in firstPoint && 'lon' in firstPoint) {
+            // Already PathPoint
+            coordinates = state.coordinates;
+          }
+        } else if (state.ipfsHash) {
+          // Fetch text file from IPFS
+          const response = await axios.get(`https://ipfs.io/ipfs/${state.ipfsHash}`, {
+            responseType: "text" // Ensure we get raw text
+          });
+
+          // Parse JSON from text
+          try {
+            coordinates = JSON.parse(response.data);
+          } catch (parseError) {
+            console.error('Error parsing JSON:', parseError);
+            throw new Error("Invalid JSON in IPFS data");
+          }
         }
 
-        } catch (parseError) {
-          console.error('Error parsing JSON:', parseError);
-        }
+        const valid = Array.isArray(coordinates) &&
+          coordinates.length > 2 &&
+          coordinates.every(point =>
+            typeof point.lat === 'number' &&
+            typeof point.lon === 'number'
+          );
 
         if (!valid) {
           setError("Polygon coordinates not found or invalid format.");
@@ -116,7 +136,7 @@ const NFTPolygonViewer = () => {
 
       } catch (err) {
         console.error('Error:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load polygon from IPFS');
+        setError(err instanceof Error ? err.message : 'Failed to load polygon data');
       } finally {
         setLoading(false);
       }
@@ -135,7 +155,7 @@ const NFTPolygonViewer = () => {
         >
           ← Back
         </button>
-        <h1 className="text-xl font-semibold">NFT Polygon Viewer</h1>
+        <h1 className="text-xl font-semibold">{title || "NFT Polygon Viewer"}</h1>
         <div className="w-20"></div>
       </div>
 

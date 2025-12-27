@@ -6,6 +6,7 @@ import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { Volume2, VolumeX, Radio } from "lucide-react";
 import MeteorShower from "../components/MeteorShower";
+import IPFSCard from "../components/IPFSCard";
 import { ConnectButton, useActiveAccount } from "thirdweb/react";
 import { thirdwebClient } from "../lib/thirdweb";
 
@@ -303,44 +304,49 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Earn by Walk Card - Right Side */}
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.8 }}
-            className="pointer-events-auto bg-black/60 backdrop-blur-xl border border-cyan-500/30 p-1 rounded-2xl max-w-sm mr-4 mt-20"
-          >
-            <div className="bg-gray-900/80 rounded-xl p-6 border border-white/5 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/20 blur-3xl rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+          <div className="flex flex-col items-end mr-4 mt-20 gap-6">
+            {/* Earn by Walk Card - Right Side */}
+            <motion.div
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+              className="pointer-events-auto bg-black/60 backdrop-blur-xl border border-cyan-500/30 p-1 rounded-2xl max-w-sm"
+            >
+              <div className="bg-gray-900/80 rounded-xl p-6 border border-white/5 relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-20 h-20 bg-cyan-500/20 blur-3xl rounded-full -mr-10 -mt-10 pointer-events-none"></div>
 
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex flex-col">
-                  <span className="text-cyan-400 text-xs font-mono tracking-widest mb-1">ACTIVE MISSION</span>
-                  <h2 className="text-3xl font-bold text-white italic">EARN BY WALK</h2>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-col">
+                    <span className="text-cyan-400 text-xs font-mono tracking-widest mb-1">ACTIVE MISSION</span>
+                    <h2 className="text-3xl font-bold text-white italic">EARN BY WALK</h2>
+                  </div>
+                  <Radio className="text-cyan-400 animate-pulse" />
                 </div>
-                <Radio className="text-cyan-400 animate-pulse" />
+
+                <p className="text-gray-400 mb-6 font-mono text-sm leading-relaxed border-l-2 border-gray-700 pl-4">
+                  Initialize movement protocols. <span className="text-white">Generate ECM tokens</span> by traversing physical space.
+                </p>
+
+                <div className="flex justify-between items-center text-xs font-mono text-cyan-300/70 mb-6 bg-black/40 p-2 rounded">
+                  <span>RATE: 1 STEP</span>
+                  <span>=</span>
+                  <span className="text-cyan-300 font-bold">0.05 ECM</span>
+                </div>
+
+                <button
+                  onClick={() => navigate('/earnbywalk')}
+                  className="w-full py-4 bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 hover:to-blue-600 text-white font-bold rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] flex items-center justify-center gap-3 group/btn relative overflow-hidden"
+                >
+                  <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
+                  <span className="relative z-10 tracking-wider">INITIATE</span>
+                  <span className="relative z-10 group-hover/btn:translate-x-1 transition-transform">→</span>
+                </button>
               </div>
+            </motion.div>
 
-              <p className="text-gray-400 mb-6 font-mono text-sm leading-relaxed border-l-2 border-gray-700 pl-4">
-                Initialize movement protocols. <span className="text-white">Generate ECM tokens</span> by traversing physical space.
-              </p>
-
-              <div className="flex justify-between items-center text-xs font-mono text-cyan-300/70 mb-6 bg-black/40 p-2 rounded">
-                <span>RATE: 1 STEP</span>
-                <span>=</span>
-                <span className="text-cyan-300 font-bold">0.05 ECM</span>
-              </div>
-
-              <button
-                onClick={() => navigate('/earnbywalk')}
-                className="w-full py-4 bg-gradient-to-r from-cyan-700 to-blue-700 hover:from-cyan-600 hover:to-blue-600 text-white font-bold rounded-lg transition-all duration-300 shadow-[0_0_20px_rgba(6,182,212,0.2)] hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] flex items-center justify-center gap-3 group/btn relative overflow-hidden"
-              >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300"></div>
-                <span className="relative z-10 tracking-wider">INITIATE</span>
-                <span className="relative z-10 group-hover/btn:translate-x-1 transition-transform">→</span>
-              </button>
-            </div>
-          </motion.div>
+            {/* IPFS Card */}
+            <IPFSCard />
+          </div>
         </main>
 
         {/* Second Screen Content (Downward) */}

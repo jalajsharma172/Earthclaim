@@ -542,6 +542,18 @@ function MapView() {
         </button>
       </div>
 
+      {/* Dashboard Button - Visible when game is not active (to avoid HUD conflict) */}
+      {!gameActive && (
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 1000 }}>
+          <button
+            onClick={() => navigate("/dashboard")}
+            style={homeButtonStyle}
+          >
+            DASHBOARD <span style={{ fontSize: '16px' }}>→</span>
+          </button>
+        </div>
+      )}
+
       {/* Menu Overlay - Visible when Map is Hidden */}
       {!showMap && (
         <div style={{
@@ -947,13 +959,19 @@ function MapView() {
                   // 3. Send to server
                   axios.post("/api/save-generated-polygon", {
                     ip: userIp,
-                    wallet: activeAccount?.address || "0x0000000000000000000000000000000000000000",
-                    coordinates: currentPoly.coordinates
+                    wallet: activeAccount?.address,
+                    coordinates: currentPoly.coordinates,
+                    name: currentPoly.name
                   }).then(res => {
                     console.log("Polygon saved:", res.data);
                     alert("Polygon saved! Check server logs.");
                   }).catch(err => {
                     console.error("Failed to save polygon:", err);
+                    console.log(activeAccount?.address);
+                    console.log(userIp);
+                    console.log(currentPoly.coordinates);
+                    console.log(currentPoly.name);
+
                     alert("Failed to save polygon. Check console.");
                   });
 

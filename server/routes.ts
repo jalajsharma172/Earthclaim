@@ -14,7 +14,7 @@ import { Position } from "geojson";
 import { UserPolygon } from '@shared/schema'
 import { deletePolygon } from "@shared/delete_Polygon"
 import { detectClosedLoopsHandler } from "./loop_detection.ts";
-import { getPolygonJSON, getUserPolygonByWalletAddress } from "@shared/Get_Polygons.ts"
+import { getFreePolygon, getFreePolygonsFromWalletAddress, SaveFreePolygon } from "@shared/Get_Polygons.ts"
 import { responseEncoding } from "axios";
 import { TokenInfo } from "@shared/TokenInfo.ts"
 import axios from "axios";
@@ -269,18 +269,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  // API to get free polygons
-  // API to get free polygons
+  // API to get free polygons 
   app.get("/api/free-polygons", async (req, res) => {
-    const walletaddress = req.query.walletaddress as string;
     // Fetch polygons for the wallet (empty list if no wallet provided)
-    const userPolygons = await getUserPolygonByWalletAddress(walletaddress);
-    res.json(userPolygons);
+    const Feepolygons = await getFreePolygon();
+    res.json(Feepolygons);
   });
 
-  // POST API to save polygons to UserPolygon table
+  // API to save free polygons 
+  app.post("/api/save-generated-polygon", async (req, res) => {
+    try {
+      const { ip, wallet, coordinates, name } = req.body;
 
-  // Additional API to get all paths (optional)
+      if (!ip || !wallet || !coordinates || !name) return res.status(400).json({
+        success: false,
+        message: "Missing required fields: ip, wallet, coordinates or name"
+      });
+      const data = await SaveFreePolygon(wallet, ip, coordinates, name);
+      if (data) {
+        return res.status(200).json({
+          success: true,
+          message: "Data received successfully",
+          data: data
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Data not received successfully"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Data received successfully",
+        data: data,
+        error: error
+      });
+    } catch (error) {
+      console.error("Error in /api/save-generated-polygon:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error });
+    }
+  });
+
+
+
+  // POST API to save polygons to UserPolygon table   .
+
   app.post("/api/save-polygons", async (req, res) => {
     try {
       const { username, polygonName, polygons } = req.body;
@@ -352,169 +386,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // API to save generated polygon from free mode
-  app.post("/api/save-generated-polygon", async (req, res) => {
-    try {
-      const { ip, wallet, coordinates } = req.body;
-
-      console.log("----- SAVE GENERATED POLYGON REQUEST -----");
-      console.log("IP Address:", ip);
-      console.log("Wallet Address:", wallet);
-      console.log("Polygon Coordinates:", JSON.stringify(coordinates));
-      console.log("------------------------------------------");
-
-      // Debug: Check Supabase configuration
-      console.log("Supabase URL:", process.env.SUPABASE_URL ? "✓ Set" : "✗ Missing");
-      console.log("Supabase Key:", process.env.SUPABASE_KEY ? "✓ Set" : "✗ Missing");
-
-      const { data, error } = await supabase
-        .from('FreePolygons')
-        .insert([
-          { wallet: wallet, ip: ip, coordinates: coordinates }
-        ])
-        .select()
-      if (data) {
-        return res.status(200).json({
-          success: true,
-          message: "Data received successfully",
-          data: data,
-          error: error
-        });
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: "Data not received successfully",
-          data: data,
-          error: error
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Data received successfully",
-        data: data,
-        error: error
-      });
-    } catch (error) {
-      console.error("Error in /api/save-generated-polygon:", error);
-      res.status(500).json({ success: false, message: "Server error", error: error });
-    }
-  });
-
-
-
-  // minted ==true; and set transaction hash
-  app.post("/api/update-polygon-minted", async (req, res) => {
-    const { username, nft } = req.body;
-    console.log("API : /api/update-polygon-minted");
-    console.log(username);
-    console.log(nft);
-
-    if (!username || !nft) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing required fields: username, nft, or transactionHash"
-      });
-    }
-    try {
-      console.log("Server On Updateminted polygon");
-
-      const polygonstatus = await UpdateMintedPolygon(username, nft);
-      console.log(polygonstatus);
-
-      if (polygonstatus.success == true) {
-        return res.status(200).json({
-          success: true,
-          message: "Polygon minted status updatedsuccessfully"
-        });
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: "Polygon is not pdatedsuccessfully"
-        });
-      }
-
-    } catch (err) {
-      return res.status(401).json({
-        success: false,
-        message: "Polygon minted status not updatedsuccessfully"
-      });
-    }
 
 
 
 
-  });
+  // // minted ==true; and set transaction hash
+  // app.post("/api/update-polygon-minted", async (req, res) => {
+  //   const { username, nft } = req.body;
+  //   console.log("API : /api/update-polygon-minted");
+  //   console.log(username);
+  //   console.log(nft);
+
+  //   if (!username || !nft) {
+  //     return res.status(400).json({
+  //       success: false,
+  //       message: "Missing required fields: username, nft, or transactionHash"
+  //     });
+  //   }
+  //   try {
+  //     console.log("Server On Updateminted polygon");
+
+  //     const polygonstatus = await UpdateMintedPolygon(username, nft);
+  //     console.log(polygonstatus);
+
+  //     if (polygonstatus.success == true) {
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: "Polygon minted status updatedsuccessfully"
+  //       });
+  //     } else {
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: "Polygon is not pdatedsuccessfully"
+  //       });
+  //     }
+
+  //   } catch (err) {
+  //     return res.status(401).json({
+  //       success: false,
+  //       message: "Polygon minted status not updatedsuccessfully"
+  //     });
+  //   }
 
 
-  app.post("/api/get-nfts", async (req, res) => {
-    try {
-      const { username } = req.body;
 
-      if (!username) {
-        console.log("Username is missing or empty - returning 400");
-        return res.status(400).json({
-          success: false,
-          message: 'No UserName found at API Body'
-        });
-      }
-      // Get JSON From 'UserPolygon' Table - AWAIT the promise
-      const data = await getPolygonJSON(username);
 
-      if (data) {
-        res.status(200).json({
-          success: true,
-          status: true,
-          data: data
-        });
-      } else {
-        res.status(404).json({
-          success: false,
-          status: false,
-          message: 'No NFT data found for user'
-        });
-      }
+  // });
 
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: error
-      });
-    }
-  });
+
+  // app.post("/api/get-nfts", async (req, res) => {
+  //   try {
+  //     const { username } = req.body;
+
+  //     if (!username) {
+  //       console.log("Username is missing or empty - returning 400");
+  //       return res.status(400).json({
+  //         success: false,
+  //         message: 'No UserName found at API Body'
+  //       });
+  //     }
+  //     // Get JSON From 'UserPolygon' Table - AWAIT the promise
+  //     const data = await getPolygonJSON(username);
+
+  //     if (data) {
+  //       res.status(200).json({
+  //         success: true,
+  //         status: true,
+  //         data: data
+  //       });
+  //     } else {
+  //       res.status(404).json({
+  //         success: false,
+  //         status: false,
+  //         message: 'No NFT data found for user'
+  //       });
+  //     }
+
+  //   } catch (error) {
+  //     res.status(500).json({
+  //       success: false,
+  //       message: 'Internal server error',
+  //       error: error
+  //     });
+  //   }
+  // });
 
   app.post("/api/freenfts", async (req, res) => {
     try {
-      const { username } = req.body;
+      const { walletAddress } = req.body;
 
-      if (!username) {
+      if (!walletAddress) {
         console.log("Username is missing or empty - returning 400");
         return res.status(400).json({
           success: false,
           message: 'No UserName found at API Body'
         });
       }
-      const data = await getUserPolygonByWalletAddress(username);
-      console.log("data", data);
-      if (data.length > 0) {
+      const data = await getFreePolygonsFromWalletAddress(walletAddress);
+      // console.log("data", data);
+      if (data.success) {
         res.status(200).json({
           success: true,
           status: true,
-          data: data
+          data: data.data
         });
       } else {
         res.status(404).json({
           success: false,
           data: data,
-          status: false,
-          username: username,
-
-          message: 'No Free NFT data found for user'
+          status: false
         });
       }
-
-
     } catch (error) {
       res.status(500).json({
         success: false,
