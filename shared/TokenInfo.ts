@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 
 export async function TokenInfo(recipient: string, tokenURI: string, tokenId: number) {
   try {

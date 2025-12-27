@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 export async function upsertUserPath(username, path) {
     try {
         console.log("Upserting username:", username, "with path:", path);

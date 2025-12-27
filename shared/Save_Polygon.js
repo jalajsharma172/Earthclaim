@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 export async function savePolygon(username, polygonName, areaInSqMeters, IPFS) {
     try {
         // First check if username exists or not

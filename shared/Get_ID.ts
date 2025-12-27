@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 import { data } from "react-router";
 
 export async function getTokenId(tokenURI: string) {

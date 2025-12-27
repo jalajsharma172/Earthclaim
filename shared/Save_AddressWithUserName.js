@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 export async function save_AddressWithUserName(username, UserAddress) {
     try {
         console.log("Upserting username:", username, "with Address:", UserAddress);

@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 
 export async function deletePolygon(username: string, polygonName: string) {
   try {

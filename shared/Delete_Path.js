@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient.js";
+import { supabase } from "./supabaseClient.js";
 // Clear path array (set to empty array but keep record)
 export async function clearUserPath(username) {
     try {
