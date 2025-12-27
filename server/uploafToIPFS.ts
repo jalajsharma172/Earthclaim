@@ -5,9 +5,9 @@ export async function uploadJsonToIPFS(metadata: unknown): Promise<string> {
     console.error('IPFS Error: metadata is undefined');
     return 'Error';
   }
-  const key1=process.env.VITE_PINATA_API_KEY;
-  const key2=process.env.VITE_PINATA_SECRET_API_KEY;
-  if(!key1 || !key2 ){
+  const key1 = process.env.VITE_PINATA_API_KEY;
+  const key2 = process.env.VITE_PINATA_SECRET_API_KEY;
+  if (!key1 || !key2) {
     console.error('IPFS Error: .env not accesable . ');
     return 'Error';
   }
@@ -26,7 +26,7 @@ export async function uploadJsonToIPFS(metadata: unknown): Promise<string> {
 
     return res.data.IpfsHash as string;
   } catch (err) {
-    console.log('IPFS Error:', err.response?.data || err);
+    console.log('IPFS Error:', (err as any).response?.data || err);
     return 'Error';
   }
 }

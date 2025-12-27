@@ -11,7 +11,7 @@ export async function setupViteDev(app: Express, server: Server) {
   const viteLogger = createLogger();
 
   // import vite config dynamically (no top-level await outside async function)
-  const { default: viteConfig } = await import("../vite.config");
+  const { default: viteConfig } = await import("../vite.config.js");
 
   const serverOptions = {
     middlewareMode: true,

@@ -1,6 +1,6 @@
 
 
-import { supabase } from "@shared/supabaseClient";
+import { supabase } from "@shared/supabaseClient.js";
 
 export async function getFreePolygonsFromWalletAddress(walletAddress: string) {
   try {

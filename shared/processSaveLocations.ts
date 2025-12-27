@@ -1,5 +1,5 @@
-import { supabase } from './supabaseClient';
-import { fetchSaveLocationsPaged } from './getAllSaveLocations';
+import { supabase } from './supabaseClient.js';
+import { fetchSaveLocationsPaged } from './getAllSaveLocations.js';
 
 type ProcessorResult = Record<string, any> | null | undefined;
 
@@ -8,7 +8,7 @@ type ProcessorResult = Record<string, any> | null | undefined;
  * - processor receives a row and should return an update object (fields to update) or null to skip.
  * - keyField is used to identify rows when updating (defaults to 'username').
  */
-export async function processAndUpdateAllLocations( processor: (row: any) => Promise<ProcessorResult>,
+export async function processAndUpdateAllLocations(processor: (row: any) => Promise<ProcessorResult>,
   opts: { keyField?: 'id' | 'username'; pageSize?: number; concurrency?: number } = {}
 ): Promise<{ success: boolean; processed: number; updated: number; errors: any[] }> {
   const keyField = opts.keyField ?? 'username';

@@ -1,5 +1,5 @@
-import { supabase } from "./supabaseClient";
-import sendTelegramMessage from "../server/Social_Media_Updates/TelegramMsgUpdate";
+import { supabase } from "./supabaseClient.js";
+import sendTelegramMessage from "../server/Social_Media_Updates/TelegramMsgUpdate.js";
 interface Top3User {
   UserName: string;
   Number_of_NFTs: number;
@@ -25,9 +25,6 @@ export async function getTop3Rewards(): Promise<GetTop3Response> {
       .select("UserName, Number_of_NFTs, Address")
       .order("Number_of_NFTs", { ascending: false })
       .limit(3);
-        
-    const text = `Top 3 Users:\n${data.map(user => `- ${user.UserName} (${user.Number_of_NFTs} NFTs)`).join("\n")}`;
-    await sendTelegramMessage(text);
 
     if (error) {
       console.error("Error fetching top 3 users:", error);
@@ -45,6 +42,9 @@ export async function getTop3Rewards(): Promise<GetTop3Response> {
         data: [],
       };
     }
+
+    const text = `Top 3 Users:\n${data.map(user => `- ${user.UserName} (${user.Number_of_NFTs} NFTs)`).join("\n")}`;
+    await sendTelegramMessage(text);
 
     return {
       success: true,

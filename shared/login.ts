@@ -1,5 +1,5 @@
 
-import { supabase } from "./supabaseClient";
+import { supabase } from "./supabaseClient.js";
 
 /**
  * Service for handling Browser LocalStorage operations

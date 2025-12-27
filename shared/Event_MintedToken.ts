@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient";
+import { supabase } from "@shared/supabaseClient.js";
 
 export async function EventListner_MintedToken_Save(recipient: string, tokenURI: string, tokenId: number) {
     try {

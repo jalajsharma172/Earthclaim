@@ -1,5 +1,5 @@
-import { attachFrontend, createExpressApp } from "./app";
-import { log } from "./vite";
+import { attachFrontend, createExpressApp } from "./app.js";
+import { log } from "./vite.js";
 
 // Bootstrap server
 (async () => {

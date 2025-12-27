@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from './supabaseClient.js';
 
 /**
  * Fetch all rows from SaveLocation (single call). Use only for small tables.

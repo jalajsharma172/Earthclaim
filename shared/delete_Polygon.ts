@@ -1,5 +1,5 @@
- import { createClient } from '@supabase/supabase-js';
-import { supabase } from "@shared/supabaseClient";
+import { createClient } from '@supabase/supabase-js';
+import { supabase } from "@shared/supabaseClient.js";
 
 export async function deletePolygon(username: string, polygonName: string) {
   try {
@@ -44,17 +44,17 @@ export async function deletePolygon(username: string, polygonName: string) {
 
     if (error) throw error;
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: `Polygon "${polygonName}" deleted successfully`,
-      data 
+      data
     };
 
   } catch (error) {
     console.error('Error deleting polygon:', error);
-    return { 
-      success: false, 
-      message: `Failed to delete polygon: ${error instanceof Error ? error.message : 'Unknown error'}` 
+    return {
+      success: false,
+      message: `Failed to delete polygon: ${error instanceof Error ? error.message : 'Unknown error'}`
     };
   }
 }

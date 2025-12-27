@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient";
+import { supabase } from "@shared/supabaseClient.js";
 
 export async function getUserPathByUsername(username: string) {
   try {
@@ -9,16 +9,16 @@ export async function getUserPathByUsername(username: string) {
       .single(); // Use single() if you expect only one record per username
 
     if (error) throw error;
-    
-    return { 
-      data: UserPath?.Path, 
-      success:true
+
+    return {
+      data: UserPath?.Path,
+      success: true
     };
   } catch (error) {
     console.error('Error getting user path:', error);
-    return { 
-      data:error, 
-      success: false 
+    return {
+      data: error,
+      success: false
     };
   }
 }

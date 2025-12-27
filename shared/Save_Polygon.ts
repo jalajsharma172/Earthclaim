@@ -1,4 +1,4 @@
-import { supabase } from "@shared/supabaseClient";
+import { supabase } from "@shared/supabaseClient.js";
 
 export async function savePolygon(username: string, polygonName: string, areaInSqMeters: number, IPFS: string) {
   try {
@@ -14,10 +14,10 @@ export async function savePolygon(username: string, polygonName: string, areaInS
       Name: polygonName,
       Area: areaInSqMeters,
       IPFShashcode: IPFS,
-      minted: false 
+      minted: false
     };
 
-    if (fetchError) { 
+    if (fetchError) {
       // If user doesn't exist (error code PGRST116), create new record
       if (fetchError.code === 'PGRST116') {
         const { data, error } = await supabase
@@ -36,7 +36,7 @@ export async function savePolygon(username: string, polygonName: string, areaInS
     } else {
       // User exists - update the existing Polygon array by adding new polygon
       const currentPolygons = existingData.Polygon || [];
-      
+
       // Add new polygon to existing polygon array
       const updatedPolygons = [
         ...currentPolygons,
