@@ -51,8 +51,13 @@ export default function Dashboard({ account }: DashboardProps) {
 
   // Mint Modal State
   const [showMintModal, setShowMintModal] = useState(false);
+  const [modalStep, setModalStep] = useState(1);
   const [selectedNft, setSelectedNft] = useState<any | null>(null);
   const [nftImage, setNftImage] = useState<File | null>(null);
+  const [uploadedIpfsUrl, setUploadedIpfsUrl] = useState<string>("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [nftName, setNftName] = useState("");
+  const [nftDescription, setNftDescription] = useState("");
 
   useEffect(() => {
     const syncWallet = async () => {
@@ -87,7 +92,7 @@ export default function Dashboard({ account }: DashboardProps) {
     syncWallet();
   }, [activeAccount]);
 
-  const mintNFTFromHash = async (nft: any) => {
+  const mintNFTFromHash = async (nft: any, metadataURI?: string) => {
     if (connectionStatus !== "connected" || !userAddress || !signer) {
       setError("Please connect your wallet first!");
       return;
@@ -110,7 +115,9 @@ export default function Dashboard({ account }: DashboardProps) {
 
     try {
       const contract = new ethers.Contract(CONTRACT_ADDRESS, CLAIM_EARTH_NFT_ABI, signer);
-      const transaction = await contract.mintNFT(nft.IPFShashcode);
+      // Use the provided metadataURI or fallback to the NFT's hash
+      const tokenURI = metadataURI || nft.IPFShashcode;
+      const transaction = await contract.mintNFT(tokenURI);
 
       console.log("Transaction Started: ", transaction.hash);
       setTransactionHash(transaction.hash);
@@ -159,23 +166,85 @@ export default function Dashboard({ account }: DashboardProps) {
   const handleMintClick = (nft: any) => {
     setSelectedNft(nft);
     setShowMintModal(true);
+    setModalStep(1);
     setNftImage(null);
+    setUploadedIpfsUrl("");
   };
 
   const handleModalClose = () => {
     setShowMintModal(false);
     setSelectedNft(null);
     setNftImage(null);
+    setUploadedIpfsUrl("");
+    setModalStep(1);
   };
 
-  const handleModalSubmit = () => {
+  const handleNextStep = async () => {
+    if (!nftImage) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", nftImage);
+
+      const response = await axios.post("/api/upload-ipfs", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (response.data.success) {
+        setUploadedIpfsUrl(response.data.ipfsUrl);
+        // Initialize default metadata
+        setNftName(`${selectedNft.Name || "Sector"} #${selectedNft.IPFShashcode?.substring(0, 6)}`);
+        setNftDescription(`This sector ${selectedNft.Name} is located at ${JSON.stringify(selectedNft.coordinates)}.`);
+        setModalStep(2);
+      } else {
+        console.error("Upload failed:", response.data.message);
+        // Could set an error state here
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleModalSubmit = async () => {
     if (!selectedNft) return;
 
-    // In a real implementation with blockchain, we would likely specific logic here
-    // For now, we proceed to call the existing mint function
-    console.log("Proceeding to mint with image:", nftImage);
-    mintNFTFromHash(selectedNft);
-    handleModalClose();
+    if (!uploadedIpfsUrl) {
+      setError("Please upload an image first");
+      return;
+    }
+
+    try {
+      // 1. Prepare Metadata
+      const metadata = {
+        name: nftName,
+        description: nftDescription,
+        image: uploadedIpfsUrl
+      };
+
+      console.log("Uploading metadata...", metadata);
+
+      // 2. Upload Metadata to IPFS
+      const response = await axios.post("/api/upload-metadata", metadata);
+
+      if (response.data.success) {
+        const metadataHash = response.data.ipfsHash;
+        console.log("Metadata uploaded: ", metadataHash);
+
+        // 3. Mint with the Metadata Hash
+        // We use the new metadata hash as the URI/Hash for the token
+        await mintNFTFromHash(selectedNft, metadataHash);
+
+        handleModalClose();
+      } else {
+        setError("Failed to upload metadata: " + response.data.message);
+      }
+    } catch (err: any) {
+      console.error("Metadata upload failed:", err);
+      setError("Failed to create NFT metadata");
+    }
   };
 
   const isMinting = (ipfsHash: string): boolean => {
@@ -438,7 +507,6 @@ export default function Dashboard({ account }: DashboardProps) {
           </div>
         )}
 
-        {/* Mint Modal */}
         {showMintModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
             <div className="bg-slate-900 border border-cyan-500/30 rounded-lg p-6 max-w-md w-full shadow-[0_0_50px_rgba(6,182,212,0.2)]">
@@ -446,49 +514,108 @@ export default function Dashboard({ account }: DashboardProps) {
 
               <div className="mb-4">
                 <p className="text-sm text-cyan-300/70 mb-2 font-mono">SECTOR ID: {selectedNft?.Name || "UNKNOWN"}</p>
-                <p className="text-xs text-cyan-500/50 mb-4 break-all">{selectedNft?.IPFShashcode}</p>
+                <div className="flex items-center justify-between text-xs text-cyan-500/50 mb-4">
+                  <span className="break-all truncate max-w-[200px]">{selectedNft?.IPFShashcode}</span>
+                  <span className="font-bold border border-cyan-900 px-2 py-1 rounded bg-black/40">STEP {modalStep}/2</span>
+                </div>
               </div>
 
-              <div className="mb-6">
-                <label className="block text-sm font-mono text-cyan-100 mb-2">UPLOAD SURVEY IMAGE</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setNftImage(e.target.files ? e.target.files[0] : null)}
-                  className="w-full text-xs text-cyan-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-900/30 file:text-cyan-400 hover:file:bg-cyan-900/50 cursor-pointer border border-cyan-900 rounded p-2 bg-black/50"
-                />
+              {modalStep === 1 ? (
+                /* STEP 1: Upload Imgae */
+                <div className="mb-6">
+                  <label className="block text-sm font-mono text-cyan-100 mb-2">UPLOAD SURVEY IMAGE</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setNftImage(e.target.files ? e.target.files[0] : null)}
+                    className="w-full text-xs text-cyan-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-cyan-900/30 file:text-cyan-400 hover:file:bg-cyan-900/50 cursor-pointer border border-cyan-900 rounded p-2 bg-black/50"
+                  />
 
-                {nftImage && (
-                  <div className="mt-4 p-2 border border-cyan-500/30 rounded bg-black/40 text-center">
-                    <p className="text-[10px] text-cyan-400 mb-2 font-mono uppercase tracking-widest">Preview</p>
-                    <img
-                      src={URL.createObjectURL(nftImage)}
-                      alt="Survey Preview"
-                      className="max-h-48 mx-auto rounded border border-cyan-900/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
-                    />
+                  {nftImage && (
+                    <div className="mt-4 p-2 border border-cyan-500/30 rounded bg-black/40 text-center">
+                      <p className="text-[10px] text-cyan-400 mb-2 font-mono uppercase tracking-widest">Preview</p>
+                      <img
+                        src={URL.createObjectURL(nftImage)}
+                        alt="Survey Preview"
+                        className="max-h-48 mx-auto rounded border border-cyan-900/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* STEP 2: Cost & Confirmation */
+                <div className="mb-6">
+                  <div className="space-y-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-mono text-cyan-300 mb-1">TOKEN NAME</label>
+                      <input
+                        type="text"
+                        value={nftName}
+                        onChange={(e) => setNftName(e.target.value)}
+                        className="w-full bg-black/40 border border-cyan-500/30 rounded p-2 text-sm text-white focus:border-cyan-400 outline-none font-mono"
+                        placeholder="Enter token name"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-mono text-cyan-300 mb-1">DESCRIPTION</label>
+                      <textarea
+                        value={nftDescription}
+                        onChange={(e) => setNftDescription(e.target.value)}
+                        className="w-full bg-black/40 border border-cyan-500/30 rounded p-2 text-sm text-white focus:border-cyan-400 outline-none font-mono h-24 resize-none"
+                        placeholder="Enter description"
+                      />
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  <div className="p-4 border border-cyan-500/30 rounded bg-black/40 mb-4 animate-pulse">
+                    <p className="text-xs text-cyan-400 mb-1 font-mono">IPFS URI GENERATED</p>
+                    <p className="text-[10px] text-gray-500 break-all bg-black/50 p-2 rounded border border-white/5 font-mono">
+                      {uploadedIpfsUrl}
+                    </p>
+                  </div>
+
+                  <div className="flex justify-between items-center bg-cyan-950/20 p-4 rounded border border-cyan-800/50">
+                    <span className="text-sm font-mono text-cyan-200">ESTIMATED COST</span>
+                    <span className="text-lg font-bold font-mono text-white">~0.005 ETH</span>
+                  </div>
+                </div>
+              )
+              }
 
               <div className="flex gap-4 justify-end">
                 <button
                   onClick={handleModalClose}
                   className="px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600 transition-all"
+                  disabled={isUploading}
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleModalSubmit}
-                  className="px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                >
-                  Create NFT
-                </button>
+
+                {modalStep === 1 ? (
+                  <button
+                    onClick={handleNextStep}
+                    disabled={!nftImage || isUploading}
+                    className={`px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)] ${!nftImage || isUploading
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed border border-gray-500'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white border border-blue-500'
+                      }`}
+                  >
+                    {isUploading ? 'UPLOADING...' : 'NEXT ->'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleModalSubmit}
+                    className="px-4 py-2 rounded text-xs font-mono font-bold uppercase tracking-wider bg-green-600 hover:bg-green-500 text-white border border-green-500 transition-all shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                  >
+                    Create NFT
+                  </button>
+                )}
               </div>
-            </div>
-          </div>
+            </div >
+          </div >
         )}
 
-      </div>
+      </div >
 
       <style>{`
         @keyframes scan {
@@ -513,6 +640,6 @@ export default function Dashboard({ account }: DashboardProps) {
           background: rgba(6, 182, 212, 0.6);
         }
       `}</style>
-    </div>
+    </div >
   );
 }

@@ -11,7 +11,7 @@ import { uploadJsonToIPFS } from "./uploafToIPFS";
 import { polygon } from "@turf/helpers";
 import area from "@turf/area";//Area calculator
 import { Position } from "geojson";
-import { UserPolygon } from '@shared/schema'
+import { EventListner_MintedToken_Save } from '@shared/Event_MintedToken'
 import { deletePolygon } from "@shared/delete_Polygon"
 import { detectClosedLoopsHandler } from "./loop_detection.ts";
 import { getFreePolygon, getFreePolygonsFromWalletAddress, SaveFreePolygon } from "@shared/Get_Polygons.ts"
@@ -31,6 +31,10 @@ import { getTokenId } from "@shared/Get_ID.ts";
 import { getTop3Rewards } from "@shared/getTop3Rewards.ts";
 import { FREE_POLYGONS } from "./freePolygons";
 import { supabase } from "@shared/supabaseClient.ts";
+import multer from "multer";
+import { uploadFileToIPFS } from "./uploadFileToIPFS";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 
@@ -38,14 +42,62 @@ import { supabase } from "@shared/supabaseClient.ts";
 // API to Login paths
 export async function registerRoutes(app: Express): Promise<Server> {
 
+  // API to upload file to IPFS
+  app.post("/api/upload-ipfs", upload.single("image"), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file uploaded" });
+      }
 
+      console.log("Uploading file to IPFS...", req.file.originalname);
+      const ipfsHash = await uploadFileToIPFS(req.file);
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
 
+      res.json({
+        success: true,
+        ipfsHash,
+        ipfsUrl
+      });
+    } catch (error) {
+      console.error("IPFS Upload Error:", error);
+      res.status(500).json({ success: false, message: "Failed to upload to IPFS", error: String(error) });
+    }
+  });
 
+  // API to upload JSON metadata to IPFS
+  app.post("/api/upload-metadata", async (req, res) => {
+    try {
+      const { name, description, image } = req.body;
 
+      if (!name || !description || !image) {
+        return res.status(400).json({
+          success: false,
+          message: "Missing metadata fields: name, description, or image"
+        });
+      }
 
+      const metadata = { name, description, image };
+      console.log("Uploading metadata to IPFS...", metadata);
 
+      const ipfsHash = await uploadJsonToIPFS(metadata);
 
+      if (ipfsHash === "Error" || !ipfsHash) {
+        throw new Error("Failed to upload metadata to IPFS");
+      }
 
+      const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${ipfsHash}`;
+
+      res.json({
+        success: true,
+        ipfsHash,
+        ipfsUrl,
+        metadata
+      });
+    } catch (error) {
+      console.error("Metadata Upload Error:", error);
+      res.status(500).json({ success: false, message: "Failed to upload metadata", error: String(error) });
+    }
+  });
 
 
   app.post("/api/auth/login", async (req, res) => {
@@ -104,9 +156,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Error in saving ", err);
     }
   })
-
-
-
 
   app.post('/api/UpdateallCoordinates/WeatherReport', async (req, res) => {
     try {
@@ -170,11 +219,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   })
-
-
-
-
-
 
 
   // API to save paths
@@ -302,8 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         message: "Data received successfully",
-        data: data,
-        error: error
+        data: data
       });
     } catch (error) {
       console.error("Error in /api/save-generated-polygon:", error);
@@ -642,11 +685,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-
-
-
-
-
   app.post("/api/send-msg-approval", async (req: Request, res: Response) => {
     try {
       const { owner, approved_to, tokenid } = req.body;
@@ -960,6 +998,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/MintedToken_EventListner", async (req, res) => {
+    try {
+      const { recipient, tokenURI, tokenId } = req.body;
+      const result = await EventListner_MintedToken_Save(recipient, tokenURI, tokenId);
+
+      if (result.success) {
+        return res.status(200).json({
+          success: true,
+          message: result,
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          message: result,
+        });
+      }
+    } catch (err) {
+      console.error("Error in /api/MintedToken_EventListner:", err);
+      return res.status(500).json({
+        success: false,
+        message: err instanceof Error ? err.message : "Unknown server error",
+      });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;
