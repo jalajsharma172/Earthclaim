@@ -10,7 +10,7 @@ type WeatherResponse = {
   };
 };
 
-function getWeatherDescription(code: number): string {
+export function getWeatherDescription(code: number): string {
   const weatherCodes: Record<number, string> = {
     0: "clear sky",
     1: "mainly clear",

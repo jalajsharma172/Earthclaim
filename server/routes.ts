@@ -1,38 +1,37 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
-import { BrowserStorageService, SuprabaseStorageService } from "@shared/login";
-import { loginSchema, userpathSchema } from "@shared/schema";
+import { BrowserStorageService, SuprabaseStorageService } from "@shared/login.js";
+import { loginSchema, userpathSchema } from "@shared/schema.js";
 import { z } from "zod";
-import { upsertUserPath } from '@shared/Save_Path'
-import { clearUserPath } from '@shared/Delete_Path'
-import { getUserPathByUsername } from '@shared/Get_Path'
-import { savePolygon } from "@shared/Save_Polygon"
-import { uploadJsonToIPFS } from "./uploafToIPFS";
+import { upsertUserPath } from '@shared/Save_Path.js';
+import { clearUserPath } from '@shared/Delete_Path.js';
+import { getUserPathByUsername } from '@shared/Get_Path.js';
+import { savePolygon } from "@shared/Save_Polygon.js";
+import { uploadJsonToIPFS } from "./uploafToIPFS.js";
 import { polygon } from "@turf/helpers";
-import area from "@turf/area";//Area calculator
+import area from "@turf/area";
 import { Position } from "geojson";
-import { EventListner_MintedToken_Save } from '@shared/Event_MintedToken'
-import { deletePolygon } from "@shared/delete_Polygon"
-import { detectClosedLoopsHandler } from "./loop_detection.ts";
-import { getFreePolygon, getFreePolygonsFromWalletAddress, SaveFreePolygon } from "@shared/Get_Polygons.ts"
+import { EventListner_MintedToken_Save } from '@shared/Event_MintedToken.js';
+import { deletePolygon } from "@shared/delete_Polygon.js";
+import { detectClosedLoopsHandler } from "./loop_detection.js";
+import { getFreePolygon, getFreePolygonsFromWalletAddress, SaveFreePolygon } from "@shared/Get_Polygons.js";
 import { responseEncoding } from "axios";
-import { TokenInfo } from "@shared/TokenInfo.ts"
+import { TokenInfo } from "@shared/TokenInfo.js";
 import axios from "axios";
-import sendTelegramMessage from "./Social_Media_Updates/TelegramMsgUpdate.ts";
-import { UpdateMintedPolygon } from "@shared/UpdateMintedPolygon";
+import { sendTelegramMessage } from "./Social_Media_Updates/TelegramMsgUpdate.js";
+import fetchTokenURI from "@/components/fetechTokenURI.js";
+import { getTokenId } from "@shared/Get_ID.js";
 import { ethers } from "ethers";
-import fetchTokenURI from "@/components/fetechTokenURI.tsx";
-import { saveLocationToSupabase } from "@shared/SaveCooridnates.ts";
-import { getAllSaveLocations } from "@shared/getAllSaveLocations.ts";
-import { processAndUpdateAllLocations } from "@shared/processSaveLocations.ts";
-import { formatTodayWeather } from "./getWeatherDescription.ts"
-import { saveWeatherReport } from "@shared/saveWeatherReport.ts";
-import { getTokenId } from "@shared/Get_ID.ts";
-import { getTop3Rewards } from "@shared/getTop3Rewards.ts";
-import { FREE_POLYGONS } from "./freePolygons";
-import { supabase } from "@shared/supabaseClient.ts";
+import { saveLocationToSupabase } from "@shared/SaveCooridnates.js"; // Note: Filename has typo
+import { getAllSaveLocations } from "@shared/getAllSaveLocations.js";
+import { processAndUpdateAllLocations } from "@shared/processSaveLocations.js";
+import { formatTodayWeather, getWeatherDescription } from "./getWeatherDescription.js";
+import { saveWeatherReport } from "@shared/saveWeatherReport.js";
+import { getTop3Rewards } from "@shared/getTop3Rewards.js";
+import { FREE_POLYGONS } from "./freePolygons.js";
+import { supabase } from "@shared/supabaseClient.js";
 import multer from "multer";
-import { uploadFileToIPFS } from "./uploadFileToIPFS";
+import { uploadFileToIPFS } from "./uploadFileToIPFS.js";
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -1009,7 +1008,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: result,
         });
       } else {
-        return res.status(200).json({
+        return res.status(404).json({
           success: false,
           message: result,
         });
