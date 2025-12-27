@@ -15,7 +15,7 @@ import { getFreePolygon, getFreePolygonsFromWalletAddress, SaveFreePolygon } fro
 import { TokenInfo } from "../shared/TokenInfo.js";
 import axios from "axios";
 import { sendTelegramMessage } from "./Social_Media_Updates/TelegramMsgUpdate.js";
-import fetchTokenURI from "../client/src/components/fetechTokenURI.js";
+import fetchTokenURI from "../shared/fetchTokenURI.js";
 import { getTokenId } from "../shared/Get_ID.js";
 import { ethers } from "ethers";
 import { saveLocationToSupabase } from "../shared/SaveCooridnates.js"; // Note: Filename has typo
