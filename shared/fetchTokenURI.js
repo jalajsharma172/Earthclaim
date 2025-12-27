@@ -1,5 +1,7 @@
 import { ethers } from "ethers";
-import CLAIM_EARTH_NFT_ABI from "./NFT.json" assert { type: "json" };
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const CLAIM_EARTH_NFT_ABI = require("./NFT.json");
 const CONTRACT_ADDRESS = process.env.VITE_CONTRACT_ADDRESS || "0xYourContractAddressHere";
 export default async function fetchTokenURI(tokenId, customProvider) {
     let provider;
