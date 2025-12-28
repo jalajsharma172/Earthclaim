@@ -1000,24 +1000,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/MintedToken_EventListner", async (req, res) => {
     try {
       const { recipient, tokenURI, tokenId } = req.body;
-      const result = await EventListner_MintedToken_Save(recipient, tokenURI, tokenId);
+      // const result = await EventListner_MintedToken_Save(recipient, tokenURI, tokenId);
+      try {
+        const { data, error } = await supabase
+          .from('MintedToken')
+          .insert([
+            { recipient: recipient, tokenURI: tokenURI, tokenId: tokenId },
+          ])
+          .select()
 
-      if (result.success) {
+
+        if (error) {
+          return res.status(404).json({
+            success: false,
+            error: error,
+          });
+        }
         return res.status(200).json({
           success: true,
-          message: result,
+          data: data,
         });
-      } else {
-        return res.status(404).json({
+      } catch (error) {
+        console.error('Error getting user path:', error);
+        return res.status(500).json({
           success: false,
-          message: result,
+          error: error
         });
       }
+
     } catch (err) {
       console.error("Error in /api/MintedToken_EventListner:", err);
       return res.status(500).json({
         success: false,
-        message: err instanceof Error ? err.message : "Unknown server error",
+        error: err instanceof Error ? err.message : "Unknown server error",
       });
     }
   });
