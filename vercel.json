@@ -2,42 +2,6 @@
     "version": 2,
     "rewrites": [
         {
-            "source": "/api/free-polygons",
-            "destination": "/api/free-polygons.ts"
-        },
-        {
-            "source": "/api/paths",
-            "destination": "/api/paths.ts"
-        },
-        {
-            "source": "/api/delete-userpath",
-            "destination": "/api/delete-userpath.ts"
-        },
-        {
-            "source": "/api/save-polygons",
-            "destination": "/api/save-polygons.ts"
-        },
-        {
-            "source": "/api/freenfts",
-            "destination": "/api/freenfts.ts"
-        },
-        {
-            "source": "/api/save-generated-polygon",
-            "destination": "/api/save-generated-polygon.ts"
-        },
-        {
-            "source": "/api/tokeninfo",
-            "destination": "/api/tokeninfo.ts"
-        },
-        {
-            "source": "/api/get-id",
-            "destination": "/api/get-id.ts"
-        },
-        {
-            "source": "/api/save-coordinates",
-            "destination": "/api/save-coordinates.ts"
-        },
-        {
             "source": "/api/(.*)",
             "destination": "/api/index.ts"
         },
