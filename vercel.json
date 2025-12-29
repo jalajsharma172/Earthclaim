@@ -2,16 +2,8 @@
     "version": 2,
     "rewrites": [
         {
-            "source": "/api/dummy",
-            "destination": "/api/dummy.ts"
-        },
-        {
             "source": "/api/free-polygons",
             "destination": "/api/free-polygons.ts"
-        },
-        {
-            "source": "/api/auth/login",
-            "destination": "/api/auth/login.ts"
         },
         {
             "source": "/api/paths",
@@ -44,18 +36,6 @@
         {
             "source": "/api/save-coordinates",
             "destination": "/api/save-coordinates.ts"
-        },
-        {
-            "source": "/api/UpdateallCoordinates/WeatherReport",
-            "destination": "/api/update-weather.ts"
-        },
-        {
-            "source": "/api/send-msg-approval",
-            "destination": "/api/send-msg-approval.ts"
-        },
-        {
-            "source": "/api/test-db",
-            "destination": "/api/test-db.ts"
         },
         {
             "source": "/api/(.*)",
