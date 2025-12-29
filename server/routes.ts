@@ -123,6 +123,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/dummy", async (req, res) => {
     return res.status(200).json({ success: true })
   })
+  app.get("/api/dummy", async (req, res) => {
+    return res.status(200).json({ success: true })
+  })
   app.all("/api/test-db", async (req, res) => {
     try {
       console.log("Testing Supabase Connection...");
