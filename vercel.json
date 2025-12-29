@@ -6,6 +6,10 @@
             "destination": "/api/dummy.ts"
         },
         {
+            "source": "/api/free-polygons",
+            "destination": "/api/free-polygons.ts"
+        },
+        {
             "source": "/api/(.*)",
             "destination": "/api/index.ts"
         },

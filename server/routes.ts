@@ -318,10 +318,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   // API to get free polygons 
+  // API to get free polygons 
   app.get("/api/free-polygons", async (req, res) => {
-    // Fetch polygons for the wallet (empty list if no wallet provided)
-    const Feepolygons = await getFreePolygon();
-    res.json(Feepolygons);
+    try {
+      // Try fetching from DB first
+      const dbPolygons = await getFreePolygon();
+
+      // If DB returns data, use it. Otherwise, fallback to static list.
+      if (dbPolygons && dbPolygons.length > 0) {
+        return res.json(dbPolygons);
+      }
+
+      console.warn("DB returned no free polygons, using static fallback.");
+      return res.json(FREE_POLYGONS);
+    } catch (error) {
+      console.error("Error fetching free polygons, using fallback:", error);
+      // Fail safe: always return static data instead of crashing/timeout
+      return res.json(FREE_POLYGONS);
+    }
   });
 
   // API to save free polygons 
