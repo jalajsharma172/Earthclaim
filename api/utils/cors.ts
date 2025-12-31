@@ -1,6 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-export function allowCors(fn: Function) {
+/**
+ * Wraps an API handler to add CORS headers automatically.
+ * 
+ * @param handler The API handler function
+ * @returns A wrapped handler that handles OPTIONS requests and adds CORS headers
+ */
+export function allowCors(handler: (req: VercelRequest, res: VercelResponse) => Promise<any> | any) {
     return async (req: VercelRequest, res: VercelResponse) => {
         res.setHeader('Access-Control-Allow-Credentials', 'true');
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,6 +21,6 @@ export function allowCors(fn: Function) {
             return;
         }
 
-        return await fn(req, res);
+        return await handler(req, res);
     };
 }
