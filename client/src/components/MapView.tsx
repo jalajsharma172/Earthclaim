@@ -957,7 +957,7 @@ function MapView() {
                   }
 
                   // 3. Send to server
-                  axios.post("/api/save-generated-polygon", {
+                  axios.post("/api/free-polygons", {
                     ip: userIp,
                     wallet: activeAccount?.address,
                     coordinates: currentPoly.coordinates,
