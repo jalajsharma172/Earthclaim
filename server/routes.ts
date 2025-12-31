@@ -98,6 +98,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   }
   // });
 
+  app.get("/api/dummmy", (req, res) => {
+    return res.status(200).json({
+      success: true,
+      message: "Dummy Data"
+    })
+  })
+
+  app.post("/api/dummmy", (req, res) => {
+    return res.status(200).json({
+      success: true,
+      message: "Dummy Data"
+    })
+  })
+
 
   app.get("/api/free-polygons", (req, res) => {
     // Return static data from server-side file instead of DB call
