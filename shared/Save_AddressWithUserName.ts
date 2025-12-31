@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function save_AddressWithUserName(username: string, UserAddress: string) {
   try {
@@ -13,6 +13,7 @@ export async function save_AddressWithUserName(username: string, UserAddress: st
 
 
 
+    const supabase = getSupabaseClient();
     let { data: existingData, error } = await supabase
       .from('Address')
       .select('Address')  // Fixed: added quotes around column name
