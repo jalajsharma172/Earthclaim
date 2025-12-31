@@ -1,9 +1,10 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function upsertUserPath(username: string, path: any[]) {
   try {
     console.log("Upserting username:", username, "with path:", path);
 
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from("UserPath")
       .upsert(

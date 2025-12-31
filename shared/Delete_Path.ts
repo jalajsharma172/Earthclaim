@@ -1,9 +1,10 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 // Clear path array (set to empty array but keep record)
 export async function clearUserPath(username: string) {
   try {
 
+    const supabase = getSupabaseClient();
     const { error } = await supabase
       .from('UserPath')
       .delete()

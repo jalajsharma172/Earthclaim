@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { getSupabaseClient } from './supabaseClient.js';
 import { fetchSaveLocationsPaged } from './getAllSaveLocations.js';
 
 type ProcessorResult = Record<string, any> | null | undefined;
@@ -45,6 +45,7 @@ export async function processAndUpdateAllLocations(processor: (row: any) => Prom
             if (selectorValue === undefined) {
               throw new Error(`Key field "${keyField}" not found on row`);
             }
+            const supabase = getSupabaseClient();
             const { error } = await supabase
               .from('SaveLocation')
               .update(updateObj)

@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 import sendTelegramMessage from "../server/Social_Media_Updates/TelegramMsgUpdate.js";
 interface Top3User {
   UserName: string;
@@ -20,6 +20,7 @@ interface GetTop3Response {
  */
 export async function getTop3Rewards(): Promise<GetTop3Response> {
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from("LeaderBoard")
       .select("UserName, Number_of_NFTs, Address")

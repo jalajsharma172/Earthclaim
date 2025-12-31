@@ -1,7 +1,8 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function EventListner_MintedToken_Save(recipient: string, tokenURI: string, tokenId: number) {
     try {
+        const supabase = getSupabaseClient();
         const { data, error } = await supabase
             .from('MintedToken')
             .insert([

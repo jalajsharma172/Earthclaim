@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function deletePolygon(username: string, polygonName: string) {
   try {
     // First, get the current user data
+    const supabase = getSupabaseClient();
     const { data: existingData, error: fetchError } = await supabase
       .from('UserPolygon')
       .select('Polygon')

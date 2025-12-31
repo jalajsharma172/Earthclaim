@@ -1,7 +1,8 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function getUserPathByUsername(username: string) {
   try {
+    const supabase = getSupabaseClient();
     let { data: UserPath, error } = await supabase
       .from('UserPath')
       .select('Path')

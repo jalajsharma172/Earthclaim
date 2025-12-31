@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { getSupabaseClient } from './supabaseClient.js';
 
 interface WeatherReportData {
   username: string;
@@ -19,6 +19,7 @@ export async function saveWeatherReport(
     }
 
     // First, check if the username exists
+    const supabase = getSupabaseClient();
     const { data: existingData, error: searchError } = await supabase
       .from('WeatherReport')
       .select()

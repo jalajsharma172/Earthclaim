@@ -1,8 +1,9 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function savePolygon(username: string, polygonName: string, areaInSqMeters: number, IPFS: string) {
   try {
     // First check if username exists or not
+    const supabase = getSupabaseClient();
     const { data: existingData, error: fetchError } = await supabase
       .from('UserPolygon') // Use correct table name from your comment
       .select('Polygon')

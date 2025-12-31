@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function UpdateMintedPolygon(username: string, nft: any) {
   try {
@@ -12,6 +12,7 @@ export async function UpdateMintedPolygon(username: string, nft: any) {
     console.log("Shared Side - UpdateMintedPolygon ");
     console.log(nft);
 
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('UserPolygon')
       .update({ Polygon: nft })

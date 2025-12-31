@@ -1,9 +1,10 @@
-import { supabase } from './supabaseClient.js';
+import { getSupabaseClient } from './supabaseClient.js';
 
 /**
  * Fetch all rows from SaveLocation (single call). Use only for small tables.
  */
 export async function getAllSaveLocations(): Promise<any[]> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase.from('SaveLocation').select('*');
   if (error) {
     console.error('Error fetching SaveLocation rows:', error);
@@ -17,6 +18,7 @@ export async function getAllSaveLocations(): Promise<any[]> {
  * Use this for large tables. rangeStart and rangeEnd are inclusive indexes.
  */
 export async function fetchSaveLocationsPaged(rangeStart = 0, rangeEnd = 999): Promise<any[]> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from('SaveLocation')
     .select('*')
@@ -33,6 +35,7 @@ export async function fetchSaveLocationsPaged(rangeStart = 0, rangeEnd = 999): P
  * Count rows in SaveLocation. Useful to decide pagination window.
  */
 export async function countSaveLocations(): Promise<number> {
+  const supabase = getSupabaseClient();
   const { count, error } = await supabase
     .from('SaveLocation')
     .select('id', { count: 'exact', head: true });

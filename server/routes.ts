@@ -29,7 +29,7 @@ import { formatTodayWeather, getWeatherDescription } from "./getWeatherDescripti
 import { saveWeatherReport } from "../shared/saveWeatherReport.js";
 import { getTop3Rewards } from "../shared/getTop3Rewards.js";
 import { FREE_POLYGONS } from "./freePolygons.js";
-import { supabase } from "../shared/supabaseClient.js";
+import { getSupabaseClient } from "../shared/supabaseClient.js";
 import multer from "multer";
 import { uploadFileToIPFS } from "./uploadFileToIPFS.js";
 
@@ -997,7 +997,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     const { recipient, tokenURI, tokenId } = req.body;
   //     // const result = await EventListner_MintedToken_Save(recipient, tokenURI, tokenId);
   //     try {
-  //       const { data, error } = await supabase
+  //      console.log("Testing Supabase Connection...");
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.from('users').select('*').limit(1);
   //         .from('MintedToken')
   //         .insert([
   //           { recipient: recipient, tokenURI: tokenURI, tokenId: tokenId },

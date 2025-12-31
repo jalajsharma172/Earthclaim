@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient.js';
+import { getSupabaseClient } from './supabaseClient.js';
 
 export async function saveLocationToSupabase(
   username: string,
@@ -15,6 +15,7 @@ export async function saveLocationToSupabase(
     }
 
     // First, check if the username exists
+    const supabase = getSupabaseClient();
     const { data: existingData, error: searchError } = await supabase
       .from('SaveLocation')
       .select()

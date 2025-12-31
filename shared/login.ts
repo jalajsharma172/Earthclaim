@@ -1,5 +1,5 @@
 
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 /**
  * Service for handling Browser LocalStorage operations
@@ -29,6 +29,7 @@ export const BrowserStorageService = {
  */
 export const SuprabaseStorageService = async (username?: string, useremail?: string, walletAddress?: string) => {
 
+    const supabase = getSupabaseClient();
     // 1. Determine query filter based on available inputs
     let query = supabase.from('login').select('*');
 

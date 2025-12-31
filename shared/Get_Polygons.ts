@@ -1,6 +1,6 @@
 
 
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 
 export async function getFreePolygonsFromWalletAddress(walletAddress: string) {
   try {
@@ -15,6 +15,7 @@ export async function getFreePolygonsFromWalletAddress(walletAddress: string) {
     console.log("polygon fetching ffile : ", walletAddress);
 
 
+    const supabase = getSupabaseClient();
     let { data: FreePolygons, error } = await supabase
       .from('FreePolygons')
       .select('*')
@@ -44,6 +45,7 @@ export async function getFreePolygon() {
 
   try {
 
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('AviableFreePolygons')
       .select('*');
@@ -67,6 +69,7 @@ export async function SaveFreePolygon(wallet: string, ip: string, coordinates: s
 
   try {
 
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('FreePolygons')
       .insert([
