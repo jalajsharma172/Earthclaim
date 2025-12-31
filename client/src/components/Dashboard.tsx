@@ -30,31 +30,31 @@ export default function Dashboard({ account }: DashboardProps) {
   const navigate = useNavigate();
   const activeAccount = useActiveAccount();
   const [tokenCounter, setTokenCounter] = useState(0);
-  const [userAddress, setUserAddress] = useState < string > ("");
-  const [connectionStatus, setConnectionStatus] = useState < ConnectionStatus > ("disconnected");
-  const [error, setError] = useState < string > ("");
-  const [transactionHash, setTransactionHash] = useState < string > ("");
-  const [userNFTCount, setUserNFTCount] = useState < number > (0);
+  const [userAddress, setUserAddress] = useState<string>("");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("disconnected");
+  const [error, setError] = useState<string>("");
+  const [transactionHash, setTransactionHash] = useState<string>("");
+  const [userNFTCount, setUserNFTCount] = useState<number>(0);
 
-  const [userNFTData, setUserNFTData] = useState < UserNFTData[] > ([]);
-  const [loadingNFTData, setLoadingNFTData] = useState < boolean > (false);
-  const [currentUsername, setCurrentUsername] = useState < string > ("");
+  const [userNFTData, setUserNFTData] = useState<UserNFTData[]>([]);
+  const [loadingNFTData, setLoadingNFTData] = useState<boolean>(false);
+  const [currentUsername, setCurrentUsername] = useState<string>("");
 
-  const [nftData, setNftData] = useState < any[] | null > (null);
+  const [nftData, setNftData] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const [provider, setProvider] = useState < ethers.BrowserProvider | null > (null);
-  const [signer, setSigner] = useState < ethers.Signer | null > (null);
+  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
+  const [signer, setSigner] = useState<ethers.Signer | null>(null);
 
-  const [mintingNFTs, setMintingNFTs] = useState < Set < string >> (new Set());
+  const [mintingNFTs, setMintingNFTs] = useState<Set<string>>(new Set());
   const [isAnyMinting, setIsAnyMinting] = useState(false);
 
   // Mint Modal State
   const [showMintModal, setShowMintModal] = useState(false);
   const [modalStep, setModalStep] = useState(1);
-  const [selectedNft, setSelectedNft] = useState < any | null > (null);
-  const [nftImage, setNftImage] = useState < File | null > (null);
-  const [uploadedIpfsUrl, setUploadedIpfsUrl] = useState < string > ("");
+  const [selectedNft, setSelectedNft] = useState<any | null>(null);
+  const [nftImage, setNftImage] = useState<File | null>(null);
+  const [uploadedIpfsUrl, setUploadedIpfsUrl] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [nftName, setNftName] = useState("");
   const [nftDescription, setNftDescription] = useState("");
