@@ -1,10 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { allowCors } from './utils/cors.js';
 import { SaveFreePolygon } from '../shared/Get_Polygons.js';
+import { FREE_POLYGONS } from '../server/freePolygons.js';
 
 async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
+    }
+
+    if (req.method === 'GET') {
+        console.log("Serving static free polygons.");
+        return res.status(200).json(FREE_POLYGONS);
     }
 
     if (req.method !== 'POST') {
