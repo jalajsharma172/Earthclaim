@@ -21,6 +21,8 @@ async function setup(req: any, res: any) {
       serverlessHandler = serverless(app);
     }
 
+    // Log request details for debugging
+    console.log(`[Vercel] Request: ${req.method} ${req.url}`);
     return serverlessHandler(req, res);
   } catch (error) {
     console.error("[Vercel] Critical Initialization Error:", error);

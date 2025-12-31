@@ -55,7 +55,10 @@ export async function createExpressApp(): Promise<{ app: express.Express; server
     next();
   });
 
-  await initializeDatabase();
+  // Optimize for Serverless: Do NOT wait for DB connection on startup.
+  // Drizzle/PG pool will connect lazily on the first request.
+  // await initializeDatabase();
+
   const httpServer = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -17,10 +17,9 @@ if (!connectionString) {
 const pool = new Pool({
   connectionString,
   ssl: { rejectUnauthorized: false },
-  family: 4, // 👈 FORCE IPv4
   max: 10,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 20000,
+  connectionTimeoutMillis: 2000, // Fail fast (2s) so we don't hit Vercel's 10s limit
 });
 
 // Initialize Drizzle ORM with the connection pool
