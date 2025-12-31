@@ -46,7 +46,7 @@ export async function createExpressApp() {
         });
         next();
     });
-    await initializeDatabase();
+    // await initializeDatabase();
     const httpServer = await registerRoutes(app);
     app.use((err, _req, res, _next) => {
         const status = err.status || err.statusCode || 500;

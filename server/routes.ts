@@ -99,6 +99,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  app.get("/api/free-polygons", async (req, res) => {
+    try {
+      // Try fetching from DB first
+      const dbPolygons = await getFreePolygon();
+
+      // If DB returns data, use it. Otherwise, fallback to static list.
+      if (dbPolygons && dbPolygons.length > 0) {
+        return res.json(dbPolygons);
+      }
+
+      console.warn("DB returned no free polygons, using static fallback.");
+      return res.json(FREE_POLYGONS);
+    } catch (error) {
+      console.error("Error fetching free polygons, using fallback:", error);
+      // Fail safe: always return static data instead of crashing/timeout
+      return res.json(FREE_POLYGONS);
+    }
+  });
+
+  // API to SAVE free polygons 
+  app.post("/api/save-generated-polygon", async (req, res) => {
+    try {
+      const { ip, wallet, coordinates, name } = req.body;
+
+      if (!ip || !wallet || !coordinates || !name) return res.status(400).json({
+        success: false,
+        message: "Missing required fields: ip, wallet, coordinates or name"
+      });
+      const data = await SaveFreePolygon(wallet, ip, coordinates, name);
+      if (data) {
+        return res.status(200).json({
+          success: true,
+          message: "Data received successfully",
+          data: data
+        });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: "Data not received successfully"
+        });
+      }
+
+      res.json({
+        success: true,
+        message: "Data received successfully",
+        data: data
+      });
+    } catch (error) {
+      console.error("Error in /api/save-generated-polygon:", error);
+      res.status(500).json({ success: false, message: "Server error", error: error });
+    }
+  });
+
+
   // app.post("/api/auth/login", async (req, res) => {
   //   try {
   //     console.log("Login request body:", req.body);
@@ -292,59 +346,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // });
   // API to get free polygons 
   // API to get free polygons 
-
-  app.get("/api/free-polygons", async (req, res) => {
-    try {
-      // Try fetching from DB first
-      const dbPolygons = await getFreePolygon();
-
-      // If DB returns data, use it. Otherwise, fallback to static list.
-      if (dbPolygons && dbPolygons.length > 0) {
-        return res.json(dbPolygons);
-      }
-
-      console.warn("DB returned no free polygons, using static fallback.");
-      return res.json(FREE_POLYGONS);
-    } catch (error) {
-      console.error("Error fetching free polygons, using fallback:", error);
-      // Fail safe: always return static data instead of crashing/timeout
-      return res.json(FREE_POLYGONS);
-    }
-  });
-
-  // API to SAVE free polygons 
-  app.post("/api/save-generated-polygon", async (req, res) => {
-    try {
-      const { ip, wallet, coordinates, name } = req.body;
-
-      if (!ip || !wallet || !coordinates || !name) return res.status(400).json({
-        success: false,
-        message: "Missing required fields: ip, wallet, coordinates or name"
-      });
-      const data = await SaveFreePolygon(wallet, ip, coordinates, name);
-      if (data) {
-        return res.status(200).json({
-          success: true,
-          message: "Data received successfully",
-          data: data
-        });
-      } else {
-        return res.status(400).json({
-          success: false,
-          message: "Data not received successfully"
-        });
-      }
-
-      res.json({
-        success: true,
-        message: "Data received successfully",
-        data: data
-      });
-    } catch (error) {
-      console.error("Error in /api/save-generated-polygon:", error);
-      res.status(500).json({ success: false, message: "Server error", error: error });
-    }
-  });
 
 
 
