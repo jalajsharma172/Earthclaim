@@ -2,7 +2,15 @@
     "version": 2,
     "rewrites": [
         {
-            "source": "/(.*)",
+            "source": "/api/dummy",
+            "destination": "/api/dummy.ts"
+        },
+        {
+            "source": "/api/free-polygons",
+            "destination": "/api/free-polygons.ts"
+        },
+        {
+            "source": "/((?!api/.*).*)",
             "destination": "/index.html"
         }
     ],
