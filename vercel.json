@@ -10,6 +10,10 @@
             "destination": "/api/free-polygons.ts"
         },
         {
+            "source": "/api/dashboard_free_nfts",
+            "destination": "/api/dashboard_free_nfts.ts"
+        },
+        {
             "source": "/((?!api/.*).*)",
             "destination": "/index.html"
         }
