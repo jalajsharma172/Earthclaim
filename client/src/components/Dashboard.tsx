@@ -273,7 +273,7 @@ export default function Dashboard({ account }: DashboardProps) {
   const fetechNFTs = async (walletAddress: string) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/freenfts', { walletAddress: walletAddress });
+      const response = await axios.post('/api/dashboard_free_nfts', { walletAddress: walletAddress });
       if (response.data.success) {
         setNftData(response.data.data);
         setError('');

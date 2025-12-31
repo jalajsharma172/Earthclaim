@@ -119,6 +119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return res.status(200).json(FREE_POLYGONS);
   });
 
+
+
   // API to SAVE free polygons 
   app.post("/api/free-polygons", async (req, res) => {
     try {
@@ -154,40 +156,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // get your Free NFTs
-  // app.post("/api/freenfts", async (req, res) => {
-  //   try {
-  //     const { walletAddress } = req.body;
+  app.post("/api/dashboard_free_nfts", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
 
-  //     if (!walletAddress) {
-  //       console.log("Username is missing or empty - returning 400");
-  //       return res.status(400).json({
-  //         success: false,
-  //         message: 'No UserName found at API Body'
-  //       });
-  //     }
-  //     const data = await getFreePolygonsFromWalletAddress(walletAddress);
-  //     // console.log("data", data);
-  //     if (data.success) {
-  //       res.status(200).json({
-  //         success: true,
-  //         status: true,
-  //         data: data.data
-  //       });
-  //     } else {
-  //       res.status(404).json({
-  //         success: false,
-  //         data: data,
-  //         status: false
-  //       });
-  //     }
-  //   } catch (error) {
-  //     res.status(500).json({
-  //       success: false,
-  //       message: 'Internal server error',
-  //       error: error
-  //     });
-  //   }
-  // });
+      if (!walletAddress) {
+        console.log("Username is missing or empty - returning 400");
+        return res.status(400).json({
+          success: false,
+          message: 'No UserName found at API Body'
+        });
+      }
+      const data = await getFreePolygonsFromWalletAddress(walletAddress);
+      // console.log("data", data);
+      if (data.success) {
+        res.status(200).json({
+          success: true,
+          status: true,
+          data: data.data
+        });
+      } else {
+        res.status(404).json({
+          success: false,
+          data: data,
+          status: false
+        });
+      }
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: error
+      });
+    }
+  });
 
 
 
