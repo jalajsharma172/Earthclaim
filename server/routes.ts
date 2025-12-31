@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try fetching from DB first
       console.log("CAll to /api/free-polygons");
       console.log("calling getFreePolygon");
-      
+
       const dbPolygons = await getFreePolygon();
 
       // If DB returns data, use it. Otherwise, fallback to static list.
@@ -962,14 +962,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //   try {
   //     const result = await getTop3Rewards();
 
-
-
-
-
-
-
-
-
   //     if (!result.success) {
   //       return res.status(result.data && result.data.length === 0 ? 404 : 500).json({
   //         success: false,
@@ -1001,8 +993,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   //     // const result = await EventListner_MintedToken_Save(recipient, tokenURI, tokenId);
   //     try {
   //      console.log("Testing Supabase Connection...");
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase.from('users').select('*').limit(1);
+  // const supabase = getSupabaseClient();
+  // const { data, error } = await supabase.from('users').select('*').limit(1);
   //         .from('MintedToken')
   //         .insert([
   //           { recipient: recipient, tokenURI: tokenURI, tokenId: tokenId },
