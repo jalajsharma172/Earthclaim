@@ -3,9 +3,9 @@ import { ethers } from "ethers";
 import CLAIM_EARTH_NFT_ABI from "./abi.json";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import { TokenInfoViewer } from "./TokenInfoViewer.tsx";
-import ThreeEarth from "./ThreeEarth";
-import StarField from "./StarField";
+import { TokenInfoViewer } from "./TokenInfoViewer.jsx";
+import ThreeEarth from "./ThreeEarth.jsx";
+import StarField from "./StarField.jsx";
 import { Globe, Shield, Activity, Zap, Server, Database, Wifi } from "lucide-react";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
