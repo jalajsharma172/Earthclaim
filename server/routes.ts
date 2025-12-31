@@ -102,6 +102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/free-polygons", async (req, res) => {
     try {
       // Try fetching from DB first
+      console.log("CAll to /api/free-polygons");
+      console.log("calling getFreePolygon");
+      
       const dbPolygons = await getFreePolygon();
 
       // If DB returns data, use it. Otherwise, fallback to static list.

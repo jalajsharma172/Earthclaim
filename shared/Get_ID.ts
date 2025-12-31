@@ -1,8 +1,9 @@
-import { supabase } from "./supabaseClient.js";
+import { getSupabaseClient } from "./supabaseClient.js";
 import { data } from "react-router";
 
 export async function getTokenId(tokenURI: string) {
   try {
+    const supabase = getSupabaseClient();
     let { data, error } = await supabase
       .from('TokenInfo')
       .select('tokenId')

@@ -44,11 +44,12 @@ export async function getFreePolygonsFromWalletAddress(walletAddress: string) {
 export async function getFreePolygon() {
 
   try {
-
+    console.log("polygon fetching file : getFreePolygon");
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('AviableFreePolygons')
       .select('*');
+    console.log(data);
 
 
     if (error) {
